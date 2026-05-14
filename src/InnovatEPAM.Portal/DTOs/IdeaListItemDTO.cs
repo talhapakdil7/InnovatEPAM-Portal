@@ -19,4 +19,10 @@ public class IdeaListItemDTO
 
     /// <summary>Integer order of the current review stage (1–4), or 0 when no stage assigned.</summary>
     public int CurrentReviewStageOrder { get; set; }
+
+    /// <summary>Overall aggregate score (null = no scores yet).</summary>
+    public decimal? AggregateScore { get; set; }
+
+    /// <summary>Number of admins who have scored this idea.</summary>
+    public int ScorerCount { get; set; }
 }

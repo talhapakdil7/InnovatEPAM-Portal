@@ -17,6 +17,12 @@ public class IdeaDetailViewModel
 
     /// <summary>True when the idea is in Draft status, enabling edit/delete actions in the view.</summary>
     public bool IsDraft { get; set; }
+
+    /// <summary>Overall aggregate score visible to the submitter (null = not yet scored).</summary>
+    public decimal? AggregateScore { get; set; }
+
+    /// <summary>Number of admins who have scored this idea.</summary>
+    public int ScorerCount { get; set; }
 }
 
 public class CreateIdeaViewModel
@@ -61,12 +67,30 @@ public class AdminIdeaListViewModel
 
     /// <summary>All available category keys and display names for the filter dropdown.</summary>
     public Dictionary<string, string> AvailableCategories { get; set; } = new();
+
+    /// <summary>True when blind review mode is globally active; drives the info banner in the view.</summary>
+    public bool IsBlindReviewActive { get; set; }
 }
 
 public class AdminIdeaDetailViewModel
 {
     public IdeaDetailDTO Idea { get; set; } = null!;
     public List<string> AllowedStatuses { get; set; } = new();
+
+    /// <summary>True when blind review mode is globally active; drives the info banner in the view.</summary>
+    public bool IsBlindReviewActive { get; set; }
+
+    /// <summary>Full score summary for the idea. Null when no admin has scored yet — view shows "No scores yet".</summary>
+    public ScoreSummaryDTO? ScoreSummary { get; set; }
+
+    /// <summary>The viewing admin's own current score, pre-populated into the scoring form.</summary>
+    public SubmitScoreViewModel ScoreForm { get; set; } = new();
+
+    /// <summary>
+    /// True when the idea's status allows scoring (Submitted or UnderReview).
+    /// False for Draft, Accepted, or Rejected — form is replaced with a read-only badge.
+    /// </summary>
+    public bool IsScoringAllowed { get; set; }
 }
 
 public class UpdateStatusViewModel

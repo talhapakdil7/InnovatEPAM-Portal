@@ -12,11 +12,16 @@ namespace InnovatEPAM.Portal.Controllers;
 public class IdeasController : Controller
 {
     private readonly IIdeaService _ideaService;
+    private readonly IScoreService _scoreService;
     private readonly UserManager<ApplicationUser> _userManager;
 
-    public IdeasController(IIdeaService ideaService, UserManager<ApplicationUser> userManager)
+    public IdeasController(
+        IIdeaService ideaService,
+        IScoreService scoreService,
+        UserManager<ApplicationUser> userManager)
     {
         _ideaService = ideaService;
+        _scoreService = scoreService;
         _userManager = userManager;
     }
 
@@ -79,11 +84,16 @@ public class IdeasController : Controller
 
         if (idea == null) return NotFound();
 
+        // Submitter sees only the overall aggregate (no breakdown, no scorer names — FR-009)
+        var scoreSummary = await _scoreService.GetScoreSummaryAsync(id, isBlindReviewActive: false);
+
         return View(new IdeaDetailViewModel
         {
             Idea = idea,
             IsAdmin = isAdmin,
-            IsDraft = idea.Status == "Draft"
+            IsDraft = idea.Status == "Draft",
+            AggregateScore = scoreSummary.OverallAverage,
+            ScorerCount = scoreSummary.ScorerCount
         });
     }
 

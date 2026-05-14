@@ -50,4 +50,7 @@ public class Idea
 
     /// <summary>All stage transitions recorded for this idea, in append-only history.</summary>
     public ICollection<StageTransition> StageTransitions { get; set; } = new List<StageTransition>();
+
+    /// <summary>Per-admin evaluation scores submitted for this idea.</summary>
+    public ICollection<IdeaScore> Scores { get; set; } = new List<IdeaScore>();
 }

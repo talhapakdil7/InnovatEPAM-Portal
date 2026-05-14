@@ -16,6 +16,26 @@
     var canDecide = isUnderReview && Model.Idea.IsAtFinalStage;
 }
 
+@if (Model.IsBlindReviewActive)
+{
+    <div class="alert alert-info d-flex align-items-center mb-3" role="alert">
+        <i class="bi bi-eye-slash-fill me-2 fs-5"></i>
+        <div>
+            <strong>Blind review is active</strong> — submitter identity is hidden during evaluation.
+            @if (Model.Idea.Status == "Accepted" || Model.Idea.Status == "Rejected")
+            {
+                <span class="badge bg-success ms-2">
+                    <i class="bi bi-eye me-1"></i>Identity visible — evaluation concluded
+                </span>
+            }
+            else
+            {
+                <a asp-controller="Settings" asp-action="BlindReview" class="alert-link ms-2">Manage Settings</a>
+            }
+        </div>
+    </div>
+}
+
 <div class="d-flex align-items-center mb-3">
     <a asp-action="Index" class="btn btn-sm btn-outline-secondary me-3"><i class="bi bi-arrow-left"></i></a>
     <h2 class="mb-0 text-truncate">@Model.Idea.Title</h2>
@@ -24,6 +44,136 @@
 
 <div class="row g-4">
     <div class="col-lg-8">
+
+        @* ── Evaluation Scoring Section ── *@
+        <div class="card shadow-sm mb-3">
+            <div class="card-header d-flex align-items-center gap-2">
+                <i class="bi bi-star-fill text-warning"></i>
+                <h6 class="mb-0">Evaluation Scores</h6>
+            </div>
+            <div class="card-body">
+                @if (TempData["Success"] != null)
+                {
+                    <div class="alert alert-success py-2 mb-3"><i class="bi bi-check-circle me-1"></i>@TempData["Success"]</div>
+                }
+                @if (TempData["Error"] != null)
+                {
+                    <div class="alert alert-danger py-2 mb-3"><i class="bi bi-exclamation-triangle me-1"></i>@TempData["Error"]</div>
+                }
+
+                @if (Model.IsScoringAllowed)
+                {
+                    <form asp-controller="Score" asp-action="Submit" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" asp-for="ScoreForm.IdeaId" />
+                        <div class="row g-2 mb-3">
+                            @foreach (var dim in new[] {
+                                ("Innovation", "ScoreForm.Innovation", Model.ScoreForm.Innovation),
+                                ("Technical Feasibility", "ScoreForm.TechnicalFeasibility", Model.ScoreForm.TechnicalFeasibility),
+                                ("Business Impact", "ScoreForm.BusinessImpact", Model.ScoreForm.BusinessImpact),
+                                ("Implementation Value", "ScoreForm.ImplementationValue", Model.ScoreForm.ImplementationValue)
+                            })
+                            {
+                                <div class="col-sm-6 col-md-3">
+                                    <label class="form-label small fw-semibold">@dim.Item1</label>
+                                    <select name="@dim.Item2" class="form-select form-select-sm">
+                                        <option value="">— Not scored —</option>
+                                        @for (int i = 1; i <= 5; i++)
+                                        {
+                                            <option value="@i" selected="@(dim.Item3 == i)">@i ★</option>
+                                        }
+                                    </select>
+                                </div>
+                            }
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-sm btn-warning fw-semibold">
+                                <i class="bi bi-star me-1"></i>Save Score
+                            </button>
+                            @if (Model.ScoreForm.Innovation.HasValue || Model.ScoreForm.TechnicalFeasibility.HasValue
+                              || Model.ScoreForm.BusinessImpact.HasValue || Model.ScoreForm.ImplementationValue.HasValue)
+                            {
+                                <form asp-controller="Score" asp-action="Retract" asp-route-ideaId="@Model.Idea.Id" method="post" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-sm btn-outline-danger"
+                                            onclick="return confirm('Remove your score for this idea?')">
+                                        <i class="bi bi-x-circle me-1"></i>Remove My Score
+                                    </button>
+                                </form>
+                            }
+                        </div>
+                    </form>
+                }
+                else if (Model.Idea.Status == "Accepted" || Model.Idea.Status == "Rejected")
+                {
+                    <div class="alert alert-secondary py-2 mb-3">
+                        <i class="bi bi-lock me-1"></i><strong>Scoring closed</strong> — this idea has been decided.
+                    </div>
+                }
+
+                @* Score summary — always shown when scores exist *@
+                @if (Model.ScoreSummary != null && Model.ScoreSummary.ScorerCount > 0)
+                {
+                    <hr />
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="badge bg-warning text-dark fs-6">@Model.ScoreSummary.OverallAverage?.ToString("F2") / 5</span>
+                        <small class="text-muted">(@Model.ScoreSummary.ScorerCount reviewer(s))</small>
+                    </div>
+                    <table class="table table-sm table-bordered mb-2">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Dimension</th>
+                                <th>Average</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Innovation</td><td>@(Model.ScoreSummary.AvgInnovation?.ToString("F2") ?? "—")</td></tr>
+                            <tr><td>Technical Feasibility</td><td>@(Model.ScoreSummary.AvgTechnicalFeasibility?.ToString("F2") ?? "—")</td></tr>
+                            <tr><td>Business Impact</td><td>@(Model.ScoreSummary.AvgBusinessImpact?.ToString("F2") ?? "—")</td></tr>
+                            <tr><td>Implementation Value</td><td>@(Model.ScoreSummary.AvgImplementationValue?.ToString("F2") ?? "—")</td></tr>
+                        </tbody>
+                    </table>
+                    @if (Model.ScoreSummary.AdminScores.Count > 0)
+                    {
+                        <details>
+                            <summary class="small text-muted mb-1" style="cursor:pointer">Reviewer breakdown</summary>
+                            <table class="table table-sm table-hover mt-1">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Reviewer</th>
+                                        <th>Innov.</th>
+                                        <th>Tech. Feas.</th>
+                                        <th>Bus. Impact</th>
+                                        <th>Impl. Value</th>
+                                        <th>Row Avg</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var row in Model.ScoreSummary.AdminScores)
+                                    {
+                                        <tr>
+                                            <td>@row.AdminName</td>
+                                            <td>@(row.Innovation?.ToString() ?? "—")</td>
+                                            <td>@(row.TechnicalFeasibility?.ToString() ?? "—")</td>
+                                            <td>@(row.BusinessImpact?.ToString() ?? "—")</td>
+                                            <td>@(row.ImplementationValue?.ToString() ?? "—")</td>
+                                            <td>@(row.RowAverage?.ToString("F2") ?? "—")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </details>
+                    }
+                }
+                else
+                {
+                    <div class="alert alert-light py-2 text-muted mb-0">
+                        <i class="bi bi-star me-1"></i>No scores yet for this idea.
+                    </div>
+                }
+            </div>
+        </div>
+
         <div class="card shadow-sm">
             <div class="card-body">
                 <h5 class="card-title">Description</h5>

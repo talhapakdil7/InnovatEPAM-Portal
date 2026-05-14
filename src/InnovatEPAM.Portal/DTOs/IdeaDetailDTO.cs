@@ -41,6 +41,12 @@ public class IdeaDetailDTO
 
     /// <summary>Ordered list of all stage transitions recorded for this idea, oldest first.</summary>
     public List<StageTransitionDTO> StageHistory { get; set; } = new();
+
+    /// <summary>Full score summary including per-dimension averages and admin breakdown. Null when no admin has scored yet.</summary>
+    public ScoreSummaryDTO? ScoreSummary { get; set; }
+
+    /// <summary>The requesting admin's own current score record. Null for submitter views or when admin has not yet scored.</summary>
+    public AdminScoreRowDTO? MyScore { get; set; }
 }
 
 public class IdeaAttachmentDTO

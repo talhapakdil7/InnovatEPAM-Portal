@@ -13,6 +13,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<IdeaAttachment> IdeaAttachments => Set<IdeaAttachment>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<StageTransition> StageTransitions => Set<StageTransition>();
+    public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
+    public DbSet<IdeaScore> IdeaScores => Set<IdeaScore>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -124,6 +126,48 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
 
             entity.HasIndex(t => t.IdeaId);
             entity.HasIndex(t => t.TransitionDate);
+        });
+
+        builder.Entity<SystemSetting>(entity =>
+        {
+            entity.ToTable("SystemSettings");
+            entity.HasKey(s => s.Key);
+            entity.Property(s => s.Key).HasMaxLength(100).IsRequired();
+            entity.Property(s => s.Value).HasMaxLength(500).IsRequired();
+
+            entity.HasOne(s => s.LastModifiedByAdmin)
+                .WithMany()
+                .HasForeignKey(s => s.LastModifiedByAdminId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasData(
+                new SystemSetting
+                {
+                    Key = "BlindReviewEnabled",
+                    Value = "false",
+                    LastModifiedDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+                }
+            );
+        });
+
+        builder.Entity<IdeaScore>(entity =>
+        {
+            entity.ToTable("IdeaScores");
+            entity.HasKey(s => new { s.IdeaId, s.AdminId });
+
+            entity.HasOne(s => s.Idea)
+                .WithMany(i => i.Scores)
+                .HasForeignKey(s => s.IdeaId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(s => s.Admin)
+                .WithMany()
+                .HasForeignKey(s => s.AdminId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(s => s.IdeaId);
+            entity.HasIndex(s => s.AdminId);
         });
 
         SeedRoles(builder);

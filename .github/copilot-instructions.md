@@ -1,7 +1,7 @@
 <!-- SPECKIT START -->
 
-For context about the Multi-Stage Innovation Review Workflow feature,
+For context about the Idea Scoring System feature,
 including technical architecture, data models, API contracts, and development
-setup, refer to: specs/004-multi-stage-review/plan.md
+setup, refer to: specs/006-idea-scoring-system/plan.md
 
 <!-- SPECKIT END -->

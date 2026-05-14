@@ -64,9 +64,13 @@ builder.Services.AddAutoMapper(cfg => cfg.AddProfile<AutoMapperProfile>());
 builder.Services.AddScoped<IIdeaRepository, IdeaRepository>();
 builder.Services.AddScoped<IAuditLogRepository, AuditLogRepository>();
 builder.Services.AddScoped<IStageTransitionRepository, StageTransitionRepository>();
+builder.Services.AddScoped<ISystemSettingRepository, SystemSettingRepository>();
+builder.Services.AddScoped<IIdeaScoreRepository, IdeaScoreRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IIdeaService, IdeaService>();
 builder.Services.AddScoped<IReviewWorkflowService, ReviewWorkflowService>();
+builder.Services.AddScoped<IBlindReviewService, BlindReviewService>();
+builder.Services.AddScoped<IScoreService, ScoreService>();
 
 var app = builder.Build();
 

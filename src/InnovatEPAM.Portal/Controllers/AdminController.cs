@@ -12,21 +12,39 @@ public class AdminController : Controller
 {
     private readonly IIdeaService _ideaService;
     private readonly IReviewWorkflowService _workflowService;
+    private readonly IBlindReviewService _blindReviewService;
+    private readonly IScoreService _scoreService;
     private readonly UserManager<ApplicationUser> _userManager;
 
     public AdminController(
         IIdeaService ideaService,
         IReviewWorkflowService workflowService,
+        IBlindReviewService blindReviewService,
+        IScoreService scoreService,
         UserManager<ApplicationUser> userManager)
     {
         _ideaService = ideaService;
         _workflowService = workflowService;
+        _blindReviewService = blindReviewService;
+        _scoreService = scoreService;
         _userManager = userManager;
     }
 
     public async Task<IActionResult> Index(string? statusFilter, string? categoryFilter)
     {
         var ideas = await _ideaService.GetAllIdeasAsync(statusFilter, categoryFilter);
+        var isBlindReview = await _blindReviewService.IsEnabledAsync();
+        _blindReviewService.ApplyMasking(ideas, isBlindReview);
+
+        var aggregates = await _scoreService.GetAggregatesForIdeasAsync(ideas.Select(i => i.Id));
+        foreach (var idea in ideas)
+        {
+            if (aggregates.TryGetValue(idea.Id, out var agg))
+            {
+                idea.AggregateScore = agg.OverallAverage;
+                idea.ScorerCount = agg.ScorerCount;
+            }
+        }
 
         var statusSummary = ideas
             .GroupBy(i => i.Status)
@@ -39,20 +57,42 @@ public class AdminController : Controller
             CategoryFilter = categoryFilter,
             AvailableStatuses = Enum.GetNames<IdeaStatus>().Where(s => s != "Draft").ToList(),
             AvailableCategories = CategoryDefinitions.All.ToDictionary(kv => kv.Key, kv => kv.Value.DisplayName),
-            StatusSummary = statusSummary
+            StatusSummary = statusSummary,
+            IsBlindReviewActive = isBlindReview
         };
         return View(vm);
     }
 
     public async Task<IActionResult> Detail(Guid id)
     {
-        var userId = Guid.Parse(_userManager.GetUserId(User)!);
-        var idea = await _ideaService.GetIdeaDetailAsync(id, userId, isAdmin: true);
-
+        var adminId = Guid.Parse(_userManager.GetUserId(User)!);
+        var idea = await _ideaService.GetIdeaDetailAsync(id, adminId, isAdmin: true);
         if (idea == null) return NotFound();
 
+        var isBlindReview = await _blindReviewService.IsEnabledAsync();
+        _blindReviewService.ApplyMasking(idea, isBlindReview);
+
+        var scoreSummary = await _scoreService.GetScoreSummaryAsync(id, isBlindReview);
+        var myScore = await _scoreService.GetMyScoreAsync(id, adminId);
+        var isScoringAllowed = idea.Status is "Submitted" or "UnderReview";
+
         var allowedStatuses = Enum.GetNames<IdeaStatus>().Where(s => s != "Draft").ToList();
-        return View(new AdminIdeaDetailViewModel { Idea = idea, AllowedStatuses = allowedStatuses });
+        return View(new AdminIdeaDetailViewModel
+        {
+            Idea = idea,
+            AllowedStatuses = allowedStatuses,
+            IsBlindReviewActive = isBlindReview,
+            ScoreSummary = scoreSummary.ScorerCount > 0 ? scoreSummary : null,
+            ScoreForm = new SubmitScoreViewModel
+            {
+                IdeaId = id,
+                Innovation = myScore?.Innovation,
+                TechnicalFeasibility = myScore?.TechnicalFeasibility,
+                BusinessImpact = myScore?.BusinessImpact,
+                ImplementationValue = myScore?.ImplementationValue
+            },
+            IsScoringAllowed = isScoringAllowed
+        });
     }
 
     [HttpPost, ValidateAntiForgeryToken]
@@ -226,12 +266,16 @@ public class AdminController : Controller
         var ideas = await _ideaService.GetAllIdeasAsync(statusFilter: null);
         var filtered = ideas.Where(i => i.CurrentReviewStageOrder == stage).ToList();
 
+        var isBlindReview = await _blindReviewService.IsEnabledAsync();
+        _blindReviewService.ApplyMasking(filtered, isBlindReview);
+
         var stageName = stage > 0 && Enum.IsDefined(typeof(ReviewStage), stage)
             ? ReviewStageHelper.DisplayName((ReviewStage)stage)
             : "Unknown Stage";
 
         ViewBag.StageName = stageName;
         ViewBag.StageOrder = stage;
+        ViewBag.IsBlindReviewActive = isBlindReview;
         return View(filtered);
     }
 }
