@@ -1,0 +1,75 @@
+@model InnovatEPAM.Portal.ViewModels.RevertStageViewModel
+@{
+    ViewData["Title"] = "Revert Review Stage";
+}
+
+<div class="container py-4" style="max-width: 640px;">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index">Ideas</a></li>
+            <li class="breadcrumb-item"><a asp-action="Detail" asp-route-id="@Model.IdeaId">@Model.IdeaTitle</a></li>
+            <li class="breadcrumb-item active">Revert Stage</li>
+        </ol>
+    </nav>
+
+    <div class="card shadow-sm border-warning">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0"><i class="bi bi-arrow-left-circle me-2"></i>Revert Review Stage</h5>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-warning d-flex align-items-center" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                You are reverting this idea to a previous stage. This action will be logged and cannot be undone.
+            </div>
+
+            <table class="table table-sm mb-4">
+                <tr>
+                    <th class="text-muted" style="width:40%">Idea</th>
+                    <td><strong>@Model.IdeaTitle</strong></td>
+                </tr>
+                <tr>
+                    <th class="text-muted">Current Stage</th>
+                    <td><span class="badge bg-primary">@Model.CurrentStageName</span></td>
+                </tr>
+                <tr>
+                    <th class="text-muted">Will Revert To</th>
+                    <td><span class="badge bg-warning text-dark">@Model.PreviousStageName</span></td>
+                </tr>
+            </table>
+
+            <form asp-action="RevertStage" method="post">
+                <input type="hidden" asp-for="IdeaId" />
+                <input type="hidden" asp-for="IdeaTitle" />
+                <input type="hidden" asp-for="CurrentStageName" />
+                <input type="hidden" asp-for="PreviousStageName" />
+
+                <div class="mb-3">
+                    <label asp-for="RevertReason" class="form-label">Reason for Reverting <span class="text-danger">*</span></label>
+                    <textarea asp-for="RevertReason" class="form-control" rows="3"
+                              placeholder="Explain why this idea needs to go back to the previous stage…"
+                              maxlength="500" required></textarea>
+                    <span asp-validation-for="RevertReason" class="text-danger small"></span>
+                    <div class="form-text">Required. Max 500 characters.</div>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Notes" class="form-label">Additional Notes <span class="text-muted">(optional)</span></label>
+                    <textarea asp-for="Notes" class="form-control" rows="3"
+                              placeholder="Any extra context…" maxlength="1000"></textarea>
+                    <span asp-validation-for="Notes" class="text-danger small"></span>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-warning text-dark">
+                        <i class="bi bi-arrow-left-circle me-1"></i>Revert to @Model.PreviousStageName
+                    </button>
+                    <a asp-action="Detail" asp-route-id="@Model.IdeaId" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

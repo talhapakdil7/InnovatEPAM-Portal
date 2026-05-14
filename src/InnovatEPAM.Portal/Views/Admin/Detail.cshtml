@@ -1,3 +1,4 @@
+@using InnovatEPAM.Portal.Models
 @model AdminIdeaDetailViewModel
 @{
     ViewData["Title"] = $"Review — {Model.Idea.Title}";
@@ -9,6 +10,10 @@
         "Rejected" => "bg-danger",
         _ => "bg-secondary"
     };
+    var isUnderReview = Model.Idea.Status == "UnderReview";
+    var canAdvance = isUnderReview && Model.Idea.CurrentReviewStageOrder < 4;
+    var canRevert = isUnderReview && Model.Idea.CurrentReviewStageOrder > 1;
+    var canDecide = isUnderReview && Model.Idea.IsAtFinalStage;
 }
 
 <div class="d-flex align-items-center mb-3">
@@ -103,9 +108,70 @@
                 </form>
             </div>
         </div>
+
+        @if (canAdvance || canRevert || canDecide)
+        {
+            <div class="card shadow-sm mt-3">
+                <div class="card-header fw-semibold">
+                    <i class="bi bi-diagram-3 me-1 text-primary"></i>Review Pipeline Actions
+                </div>
+                <div class="card-body d-flex flex-wrap gap-2">
+                    @if (canAdvance && !canDecide)
+                    {
+                        <a asp-action="AdvanceStage" asp-route-id="@Model.Idea.Id"
+                           class="btn btn-primary">
+                            <i class="bi bi-arrow-right-circle me-1"></i>Advance Stage
+                        </a>
+                    }
+                    @if (canDecide)
+                    {
+                        <a asp-action="RecordDecision" asp-route-id="@Model.Idea.Id"
+                           class="btn btn-dark">
+                            <i class="bi bi-check2-circle me-1"></i>Record Final Decision
+                        </a>
+                    }
+                    @if (canRevert)
+                    {
+                        <a asp-action="RevertStage" asp-route-id="@Model.Idea.Id"
+                           class="btn btn-outline-warning">
+                            <i class="bi bi-arrow-left-circle me-1"></i>Revert Stage
+                        </a>
+                    }
+                </div>
+            </div>
+        }
     </div>
 
     <div class="col-lg-4">
+        @if (Model.Idea.Status == "UnderReview" || Model.Idea.StageHistory.Any())
+        {
+            <div class="card shadow-sm mb-3">
+                <div class="card-header fw-semibold">
+                    <i class="bi bi-diagram-3 me-1 text-primary"></i>Review Progress
+                </div>
+                <div class="card-body">
+                    @{
+                        var stages = new[] { "Initial Screening", "Technical Review", "Business Impact Assessment", "Final Decision" };
+                        var currentOrder = Model.Idea.CurrentReviewStageOrder;
+                    }
+                    <div class="d-flex flex-column gap-2">
+                        @for (int i = 1; i <= 4; i++)
+                        {
+                            var isDone = i < currentOrder;
+                            var isCurrent = i == currentOrder;
+                            var iconClass = isDone ? "bi-check-circle-fill text-success"
+                                : isCurrent ? "bi-record-circle-fill text-primary"
+                                : "bi-circle text-muted";
+                            <div class="d-flex align-items-center gap-2 @(isCurrent ? "fw-semibold" : "text-muted")">
+                                <i class="bi @iconClass fs-5"></i>
+                                <span class="small">@stages[i - 1]</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
         <div class="card shadow-sm">
             <div class="card-body">
                 <h6 class="text-muted mb-3">Submission Details</h6>
@@ -144,6 +210,50 @@
                                 <strong>@log.OldStatus</strong> → <strong>@log.NewStatus</strong>
                                 <br />
                                 <span class="text-muted">by @log.ChangedByAdmin on @log.ChangedDate.ToString("MMM dd, yyyy")</span>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        }
+
+        @if (Model.Idea.StageHistory.Any())
+        {
+            <div class="card shadow-sm mt-3">
+                <div class="card-header fw-semibold">
+                    <i class="bi bi-clock-history me-1 text-secondary"></i>Stage History
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        @foreach (var t in Model.Idea.StageHistory)
+                        {
+                            var directionIcon = t.IsAdvance ? "bi-arrow-right-circle-fill text-primary" : "bi-arrow-left-circle-fill text-warning";
+                            <li class="list-group-item small">
+                                <div class="d-flex align-items-center gap-1 mb-1">
+                                    <i class="bi @directionIcon"></i>
+                                    @if (t.FromStageName != null)
+                                    {
+                                        <span>@t.FromStageName</span>
+                                        <i class="bi bi-arrow-right text-muted"></i>
+                                    }
+                                    <strong>@t.ToStageName</strong>
+                                    @if (!string.IsNullOrEmpty(t.Outcome))
+                                    {
+                                        var outcomeClass = t.Outcome == "Accepted" ? "bg-success" : "bg-danger";
+                                        <span class="badge @outcomeClass ms-1">@t.Outcome</span>
+                                    }
+                                </div>
+                                @if (!string.IsNullOrEmpty(t.RevertReason))
+                                {
+                                    <div class="text-muted fst-italic">Reason: @t.RevertReason</div>
+                                }
+                                @if (!string.IsNullOrEmpty(t.Notes))
+                                {
+                                    <div class="text-muted">@t.Notes</div>
+                                }
+                                <div class="text-muted mt-1">
+                                    by @t.TransitionedByAdminName · @t.TransitionDate.ToString("MMM dd, yyyy HH:mm")
+                                </div>
                             </li>
                         }
                     </ul>

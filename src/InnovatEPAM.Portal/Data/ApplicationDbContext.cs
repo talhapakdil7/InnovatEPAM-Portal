@@ -12,6 +12,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<Idea> Ideas => Set<Idea>();
     public DbSet<IdeaAttachment> IdeaAttachments => Set<IdeaAttachment>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<StageTransition> StageTransitions => Set<StageTransition>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -39,6 +40,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             entity.Property(i => i.Title).IsRequired().HasMaxLength(200);
             entity.Property(i => i.Description).HasMaxLength(2000);
             entity.Property(i => i.Status).IsRequired().HasConversion<int>();
+            entity.Property(i => i.CurrentReviewStage).HasConversion<int?>().IsRequired(false);
 
             entity.HasOne(i => i.Submitter)
                 .WithMany(u => u.SubmittedIdeas)
@@ -98,6 +100,30 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             entity.HasIndex(a => a.IdeaId);
             entity.HasIndex(a => a.ChangedByAdminId);
             entity.HasIndex(a => a.ChangedDate);
+        });
+
+        builder.Entity<StageTransition>(entity =>
+        {
+            entity.ToTable("StageTransitions");
+            entity.HasKey(t => t.Id);
+            entity.Property(t => t.FromStage).HasConversion<int?>().IsRequired(false);
+            entity.Property(t => t.ToStage).HasConversion<int>().IsRequired();
+            entity.Property(t => t.Notes).HasMaxLength(1000).IsRequired(false);
+            entity.Property(t => t.RevertReason).HasMaxLength(500).IsRequired(false);
+            entity.Property(t => t.Outcome).HasMaxLength(50).IsRequired(false);
+
+            entity.HasOne(t => t.Idea)
+                .WithMany(i => i.StageTransitions)
+                .HasForeignKey(t => t.IdeaId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(t => t.TransitionedByAdmin)
+                .WithMany()
+                .HasForeignKey(t => t.TransitionedByAdminId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(t => t.IdeaId);
+            entity.HasIndex(t => t.TransitionDate);
         });
 
         SeedRoles(builder);

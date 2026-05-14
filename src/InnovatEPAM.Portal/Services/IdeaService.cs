@@ -166,12 +166,25 @@ public class IdeaService : IIdeaService
             }
         }
 
+        dto.StageHistory = idea.StageTransitions
+            .OrderBy(t => t.TransitionDate)
+            .Select(t => _mapper.Map<StageTransitionDTO>(t))
+            .ToList();
+
         return dto;
     }
 
+    /// <summary>
+    /// Returns all ideas visible to admins, optionally filtered by status and category key.
+    /// Draft ideas (Status == 0) are always excluded regardless of the statusFilter argument (FR-010).
+    /// Each DTO includes a resolved CategoryDisplayName.
+    /// </summary>
     public async Task<List<IdeaListItemDTO>> GetAllIdeasAsync(string? statusFilter, string? categoryFilter = null)
     {
         var ideas = await _ideaRepo.GetAllAsync();
+
+        // FR-010: admins must never see draft ideas
+        ideas = ideas.Where(i => i.Status != IdeaStatus.Draft).ToList();
 
         if (!string.IsNullOrWhiteSpace(statusFilter) && Enum.TryParse<IdeaStatus>(statusFilter, out var status))
             ideas = ideas.Where(i => i.Status == status).ToList();
@@ -182,6 +195,197 @@ public class IdeaService : IIdeaService
         var dtos = _mapper.Map<List<IdeaListItemDTO>>(ideas);
         EnrichCategoryDisplayNames(dtos);
         return dtos;
+    }
+
+    /// <summary>
+    /// Saves a new draft idea without applying required-field validation.
+    /// Only file MIME type and size are validated.
+    /// </summary>
+    public async Task<(bool Success, string? Error, Guid DraftId)> SaveDraftAsync(Guid submitterId, CreateIdeaViewModel vm)
+    {
+        var idea = new Idea
+        {
+            Id = Guid.NewGuid(),
+            Title = vm.Title,
+            Description = vm.Description,
+            SubmitterId = submitterId,
+            Status = IdeaStatus.Draft,
+            CreatedDate = DateTime.UtcNow,
+            LastModifiedDate = DateTime.UtcNow,
+            Category = vm.Category,
+            CategoryData = BuildCategoryData(vm)
+        };
+
+        if (vm.Attachment != null)
+        {
+            var detectedMime = await FileStorageHelper.DetectMimeTypeAsync(vm.Attachment);
+            if (!FileStorageHelper.IsAllowedMimeType(detectedMime))
+                return (false, "File type is not allowed (MIME validation failed).", Guid.Empty);
+
+            var relativePath = FileStorageHelper.GetSecureStoragePath(idea.Id, vm.Attachment.FileName);
+            var absolutePath = Path.Combine(_env.ContentRootPath, relativePath);
+            Directory.CreateDirectory(Path.GetDirectoryName(absolutePath)!);
+
+            await using var stream = new FileStream(absolutePath, FileMode.Create);
+            await vm.Attachment.CopyToAsync(stream);
+
+            idea.IdeaAttachments.Add(new IdeaAttachment
+            {
+                Id = Guid.NewGuid(),
+                IdeaId = idea.Id,
+                FileName = vm.Attachment.FileName,
+                FilePath = relativePath,
+                FileSize = vm.Attachment.Length,
+                UploadedDate = DateTime.UtcNow
+            });
+        }
+
+        await _ideaRepo.AddAsync(idea);
+        _logger.LogInformation("Draft {DraftId} saved by {SubmitterId}", idea.Id, submitterId);
+        return (true, null, idea.Id);
+    }
+
+    /// <summary>
+    /// Updates an existing draft's fields and attachment without required-field validation.
+    /// Validates ownership and Draft status before applying changes.
+    /// </summary>
+    public async Task<(bool Success, string? Error)> UpdateDraftAsync(Guid draftId, Guid submitterId, EditDraftViewModel vm)
+    {
+        var idea = await _ideaRepo.GetByIdAsync(draftId);
+        if (idea == null || idea.Status != IdeaStatus.Draft || idea.SubmitterId != submitterId)
+            return (false, "Not found or access denied.");
+
+        idea.Title = vm.Title;
+        idea.Description = vm.Description;
+        idea.Category = vm.Category;
+        idea.CategoryData = BuildCategoryDataFromEdit(vm);
+        idea.LastModifiedDate = DateTime.UtcNow;
+
+        if (vm.RemoveAttachment && idea.IdeaAttachments.Any())
+        {
+            foreach (var att in idea.IdeaAttachments.ToList())
+            {
+                var absPath = Path.Combine(_env.ContentRootPath, att.FilePath);
+                if (File.Exists(absPath)) File.Delete(absPath);
+            }
+            _db.Set<IdeaAttachment>().RemoveRange(idea.IdeaAttachments);
+            idea.IdeaAttachments.Clear();
+        }
+
+        if (vm.Attachment != null)
+        {
+            var detectedMime = await FileStorageHelper.DetectMimeTypeAsync(vm.Attachment);
+            if (!FileStorageHelper.IsAllowedMimeType(detectedMime))
+                return (false, "File type is not allowed (MIME validation failed).");
+
+            // Remove the old attachment if one exists and wasn't already removed
+            foreach (var att in idea.IdeaAttachments.ToList())
+            {
+                var absPath = Path.Combine(_env.ContentRootPath, att.FilePath);
+                if (File.Exists(absPath)) File.Delete(absPath);
+            }
+            _db.Set<IdeaAttachment>().RemoveRange(idea.IdeaAttachments);
+            idea.IdeaAttachments.Clear();
+
+            var relativePath = FileStorageHelper.GetSecureStoragePath(idea.Id, vm.Attachment.FileName);
+            var absolutePath = Path.Combine(_env.ContentRootPath, relativePath);
+            Directory.CreateDirectory(Path.GetDirectoryName(absolutePath)!);
+
+            await using var stream = new FileStream(absolutePath, FileMode.Create);
+            await vm.Attachment.CopyToAsync(stream);
+
+            idea.IdeaAttachments.Add(new IdeaAttachment
+            {
+                Id = Guid.NewGuid(),
+                IdeaId = idea.Id,
+                FileName = vm.Attachment.FileName,
+                FilePath = relativePath,
+                FileSize = vm.Attachment.Length,
+                UploadedDate = DateTime.UtcNow
+            });
+        }
+
+        await _ideaRepo.UpdateAsync(idea);
+        _logger.LogInformation("Draft {DraftId} updated by {SubmitterId}", draftId, submitterId);
+        return (true, null);
+    }
+
+    /// <summary>
+    /// Saves the latest draft state and transitions it to Submitted status.
+    /// The controller must run EditDraftValidator and confirm ModelState.IsValid before calling this.
+    /// </summary>
+    public async Task<(bool Success, string? Error)> SubmitDraftAsync(Guid draftId, Guid submitterId, EditDraftViewModel vm)
+    {
+        var (updateSuccess, updateError) = await UpdateDraftAsync(draftId, submitterId, vm);
+        if (!updateSuccess) return (false, updateError);
+
+        var idea = await _ideaRepo.GetByIdAsync(draftId);
+        if (idea == null) return (false, "Draft not found after update.");
+
+        idea.Status = IdeaStatus.Submitted;
+        idea.LastModifiedDate = DateTime.UtcNow;
+        await _ideaRepo.UpdateAsync(idea);
+
+        _logger.LogInformation("Draft {DraftId} submitted by {SubmitterId}", draftId, submitterId);
+        return (true, null);
+    }
+
+    /// <summary>
+    /// Permanently deletes a draft and all associated attachment files from disk and the database.
+    /// Only the owning submitter may delete a draft.
+    /// </summary>
+    public async Task<(bool Success, string? Error)> DeleteDraftAsync(Guid draftId, Guid submitterId)
+    {
+        var idea = await _ideaRepo.GetByIdAsync(draftId);
+        if (idea == null || idea.Status != IdeaStatus.Draft || idea.SubmitterId != submitterId)
+            return (false, "Not found or access denied.");
+
+        foreach (var att in idea.IdeaAttachments)
+        {
+            var absPath = Path.Combine(_env.ContentRootPath, att.FilePath);
+            if (File.Exists(absPath)) File.Delete(absPath);
+        }
+
+        _db.Set<Idea>().Remove(idea);
+        await _db.SaveChangesAsync();
+
+        _logger.LogInformation("Draft {DraftId} deleted by {SubmitterId}", draftId, submitterId);
+        return (true, null);
+    }
+
+    /// <summary>
+    /// Serializes category-specific field answers from an <see cref="EditDraftViewModel"/> into a JSON string.
+    /// Returns null when no category is selected or the category key is unrecognized.
+    /// </summary>
+    private static string? BuildCategoryDataFromEdit(EditDraftViewModel vm)
+    {
+        if (string.IsNullOrEmpty(vm.Category) || !CategoryDefinitions.All.ContainsKey(vm.Category))
+            return null;
+
+        var data = new Dictionary<string, string?>();
+
+        switch (vm.Category)
+        {
+            case CategoryDefinitions.TechnicalImprovement:
+                data["TechArea"] = vm.TechArea;
+                data["TechEffort"] = vm.TechEffort;
+                data["TechBenefit"] = vm.TechBenefit;
+                break;
+
+            case CategoryDefinitions.ProcessImprovement:
+                data["ProcDepartment"] = vm.ProcDepartment;
+                data["ProcPainPoint"] = vm.ProcPainPoint;
+                data["ProcSavings"] = vm.ProcSavings;
+                break;
+
+            case CategoryDefinitions.ClientSolution:
+                data["ClientSegment"] = vm.ClientSegment;
+                data["ClientProblem"] = vm.ClientProblem;
+                data["ClientImpact"] = vm.ClientImpact;
+                break;
+        }
+
+        return JsonSerializer.Serialize(data);
     }
 
     public async Task<(bool Success, string? Error)> UpdateStatusAsync(Guid ideaId, string newStatus, Guid adminId)

@@ -17,6 +17,7 @@ public class IdeaRepository : IIdeaRepository
             .Include(i => i.UpdatedByAdmin)
             .Include(i => i.IdeaAttachments)
             .Include(i => i.AuditLogs).ThenInclude(a => a.ChangedByAdmin)
+            .Include(i => i.StageTransitions).ThenInclude(t => t.TransitionedByAdmin)
             .FirstOrDefaultAsync(i => i.Id == id);
 
     public async Task<List<Idea>> GetBySubmitterAsync(Guid submitterId) =>

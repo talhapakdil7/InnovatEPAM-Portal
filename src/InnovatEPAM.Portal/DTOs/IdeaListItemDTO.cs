@@ -13,4 +13,10 @@ public class IdeaListItemDTO
 
     /// <summary>Human-readable category name resolved by the service layer. Null for uncategorized ideas.</summary>
     public string? CategoryDisplayName { get; set; }
+
+    /// <summary>Human-readable current review stage name. "Pending Review" when no stage assigned.</summary>
+    public string CurrentReviewStageName { get; set; } = "Pending Review";
+
+    /// <summary>Integer order of the current review stage (1–4), or 0 when no stage assigned.</summary>
+    public int CurrentReviewStageOrder { get; set; }
 }

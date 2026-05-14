@@ -1,0 +1,64 @@
+@model InnovatEPAM.Portal.ViewModels.AdvanceStageViewModel
+@{
+    ViewData["Title"] = "Advance Review Stage";
+}
+
+<div class="container py-4" style="max-width: 640px;">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index">Ideas</a></li>
+            <li class="breadcrumb-item"><a asp-action="Detail" asp-route-id="@Model.IdeaId">@Model.IdeaTitle</a></li>
+            <li class="breadcrumb-item active">Advance Stage</li>
+        </ol>
+    </nav>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="bi bi-arrow-right-circle me-2"></i>Advance Review Stage</h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted mb-3">You are advancing this idea to the next review stage.</p>
+
+            <table class="table table-sm mb-4">
+                <tr>
+                    <th class="text-muted" style="width:40%">Idea</th>
+                    <td><strong>@Model.IdeaTitle</strong></td>
+                </tr>
+                <tr>
+                    <th class="text-muted">Current Stage</th>
+                    <td><span class="badge bg-secondary">@Model.CurrentStageName</span></td>
+                </tr>
+                <tr>
+                    <th class="text-muted">Next Stage</th>
+                    <td><span class="badge bg-primary">@Model.NextStageName</span></td>
+                </tr>
+            </table>
+
+            <form asp-action="AdvanceStage" method="post">
+                <input type="hidden" asp-for="IdeaId" />
+                <input type="hidden" asp-for="IdeaTitle" />
+                <input type="hidden" asp-for="CurrentStageName" />
+                <input type="hidden" asp-for="NextStageName" />
+
+                <div class="mb-3">
+                    <label asp-for="Notes" class="form-label">Evaluation Notes <span class="text-muted">(optional)</span></label>
+                    <textarea asp-for="Notes" class="form-control" rows="4"
+                              placeholder="Add any notes about this stage transition…" maxlength="1000"></textarea>
+                    <span asp-validation-for="Notes" class="text-danger small"></span>
+                    <div class="form-text">Max 1000 characters.</div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-arrow-right-circle me-1"></i>Advance to @Model.NextStageName
+                    </button>
+                    <a asp-action="Detail" asp-route-id="@Model.IdeaId" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

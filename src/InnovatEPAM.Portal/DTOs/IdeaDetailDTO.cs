@@ -24,6 +24,23 @@ public class IdeaDetailDTO
     /// Null when no category is assigned.
     /// </summary>
     public Dictionary<string, string>? CategoryDataFields { get; set; }
+
+    // ── Multi-stage review fields ──
+
+    /// <summary>Human-readable name of the current review stage, or "Pending Review" when none assigned.</summary>
+    public string CurrentReviewStageName { get; set; } = "Pending Review";
+
+    /// <summary>Integer order of the current review stage (1–4), or 0 when no stage is assigned.</summary>
+    public int CurrentReviewStageOrder { get; set; }
+
+    /// <summary>Total number of stages in the pipeline (constant = 4).</summary>
+    public int TotalReviewStages { get; set; } = 4;
+
+    /// <summary>True when the idea is at the last review stage (Final Decision).</summary>
+    public bool IsAtFinalStage { get; set; }
+
+    /// <summary>Ordered list of all stage transitions recorded for this idea, oldest first.</summary>
+    public List<StageTransitionDTO> StageHistory { get; set; } = new();
 }
 
 public class IdeaAttachmentDTO
