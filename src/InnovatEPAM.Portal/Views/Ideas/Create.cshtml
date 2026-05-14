@@ -1,0 +1,54 @@
+@model CreateIdeaViewModel
+@{
+    ViewData["Title"] = "Submit New Idea";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-7">
+        <div class="d-flex align-items-center mb-3">
+            <a asp-action="Index" class="btn btn-sm btn-outline-secondary me-3">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <h2 class="mb-0"><i class="bi bi-lightbulb me-2 text-warning"></i>Submit New Idea</h2>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <form asp-action="Create" method="post" enctype="multipart/form-data">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="Title" class="form-label fw-semibold">Title <span class="text-danger">*</span></label>
+                        <input asp-for="Title" class="form-control" placeholder="Give your idea a clear, concise title" maxlength="200" />
+                        <div class="form-text">Max 200 characters.</div>
+                        <span asp-validation-for="Title" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Description" class="form-label fw-semibold">Description</label>
+                        <textarea asp-for="Description" class="form-control" rows="6"
+                                  placeholder="Describe your idea: problem it solves, proposed solution, expected benefits..."
+                                  maxlength="2000"></textarea>
+                        <div class="form-text">Optional. Max 2000 characters.</div>
+                        <span asp-validation-for="Description" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="Attachment" class="form-label fw-semibold">Attachment</label>
+                        <input asp-for="Attachment" class="form-control" type="file"
+                               accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" />
+                        <div class="form-text">@Html.DisplayNameFor(m => m.Attachment)</div>
+                        <span asp-validation-for="Attachment" class="text-danger small"></span>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-send me-1"></i>Submit Idea
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

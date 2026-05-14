@@ -1,0 +1,96 @@
+@model AdminIdeaListViewModel
+@{
+    ViewData["Title"] = "Admin — All Ideas";
+}
+
+<h2 class="mb-4"><i class="bi bi-shield-check me-2"></i>Innovation Ideas Review</h2>
+
+@if (Model.StatusSummary.Any())
+{
+    <div class="row g-3 mb-4">
+        @foreach (var entry in Model.StatusSummary)
+        {
+            var cardColor = entry.Key switch
+            {
+                "Submitted" => "border-secondary",
+                "UnderReview" => "border-warning",
+                "Accepted" => "border-success",
+                "Rejected" => "border-danger",
+                _ => "border-secondary"
+            };
+            <div class="col-6 col-md-3">
+                <div class="card text-center border-2 @cardColor">
+                    <div class="card-body py-2">
+                        <h4 class="mb-0">@entry.Value</h4>
+                        <small class="text-muted">@entry.Key.Replace("UnderReview", "Under Review")</small>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<form method="get" class="d-flex gap-2 mb-4">
+    <select name="statusFilter" class="form-select w-auto">
+        <option value="">All Statuses</option>
+        @foreach (var status in Model.AvailableStatuses)
+        {
+            <option value="@status" selected="@(Model.StatusFilter == status)">@status.Replace("UnderReview", "Under Review")</option>
+        }
+    </select>
+    <button type="submit" class="btn btn-outline-secondary">
+        <i class="bi bi-funnel me-1"></i>Filter
+    </button>
+    @if (!string.IsNullOrEmpty(Model.StatusFilter))
+    {
+        <a asp-action="Index" class="btn btn-outline-danger"><i class="bi bi-x"></i>Clear</a>
+    }
+</form>
+
+@if (!Model.Ideas.Any())
+{
+    <div class="text-center py-5 text-muted">
+        <i class="bi bi-inbox display-4"></i>
+        <p class="mt-3">No ideas found.</p>
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Title</th>
+                    <th>Submitted By</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th class="text-end">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var idea in Model.Ideas)
+                {
+                    var badgeClass = idea.Status switch
+                    {
+                        "Submitted" => "bg-secondary",
+                        "UnderReview" => "bg-warning text-dark",
+                        "Accepted" => "bg-success",
+                        "Rejected" => "bg-danger",
+                        _ => "bg-secondary"
+                    };
+                    <tr>
+                        <td class="fw-semibold">@idea.Title</td>
+                        <td>@idea.SubmitterName</td>
+                        <td><span class="badge @badgeClass">@idea.Status.Replace("UnderReview", "Under Review")</span></td>
+                        <td>@idea.CreatedDate.ToString("MMM dd, yyyy")</td>
+                        <td class="text-end">
+                            <a asp-action="Detail" asp-route-id="@idea.Id" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye me-1"></i>Review
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

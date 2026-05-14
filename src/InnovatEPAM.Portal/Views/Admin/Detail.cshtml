@@ -1,0 +1,125 @@
+@model AdminIdeaDetailViewModel
+@{
+    ViewData["Title"] = $"Review — {Model.Idea.Title}";
+    var badgeClass = Model.Idea.Status switch
+    {
+        "Submitted" => "bg-secondary",
+        "UnderReview" => "bg-warning text-dark",
+        "Accepted" => "bg-success",
+        "Rejected" => "bg-danger",
+        _ => "bg-secondary"
+    };
+}
+
+<div class="d-flex align-items-center mb-3">
+    <a asp-action="Index" class="btn btn-sm btn-outline-secondary me-3"><i class="bi bi-arrow-left"></i></a>
+    <h2 class="mb-0 text-truncate">@Model.Idea.Title</h2>
+    <span class="badge @badgeClass ms-3">@Model.Idea.Status.Replace("UnderReview", "Under Review")</span>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">Description</h5>
+                @if (!string.IsNullOrWhiteSpace(Model.Idea.Description))
+                {
+                    <p>@Model.Idea.Description</p>
+                }
+                else
+                {
+                    <p class="text-muted fst-italic">No description provided.</p>
+                }
+            </div>
+        </div>
+
+        @if (Model.Idea.Attachments.Any())
+        {
+            <div class="card shadow-sm mt-3">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-paperclip me-1"></i>Attachments</h5>
+                    <ul class="list-group list-group-flush">
+                        @foreach (var att in Model.Idea.Attachments)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <span><i class="bi bi-file-earmark me-2 text-muted"></i>@att.FileName</span>
+                                <div class="d-flex align-items-center gap-2">
+                                    <small class="text-muted">@((att.FileSize / 1024.0).ToString("F0")) KB</small>
+                                    <a asp-controller="Ideas" asp-action="Download" asp-route-attachmentId="@att.Id"
+                                       class="btn btn-sm btn-outline-secondary">
+                                        <i class="bi bi-download"></i>
+                                    </a>
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        }
+
+        <div class="card shadow-sm mt-3 border-primary">
+            <div class="card-header bg-primary text-white">
+                <i class="bi bi-arrow-repeat me-1"></i>Update Status
+            </div>
+            <div class="card-body">
+                <form asp-action="UpdateStatus" method="post">
+                    <input type="hidden" name="IdeaId" value="@Model.Idea.Id" />
+                    <div class="row g-2 align-items-end">
+                        <div class="col-auto">
+                            <label for="NewStatus" class="form-label fw-semibold">New Status</label>
+                            <select name="NewStatus" id="NewStatus" class="form-select">
+                                @foreach (var status in Model.AllowedStatuses)
+                                {
+                                    <option value="@status" selected="@(Model.Idea.Status == status)">
+                                        @status.Replace("UnderReview", "Under Review")
+                                    </option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-auto">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-1"></i>Save
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6 class="text-muted mb-3">Submission Details</h6>
+                <dl class="row mb-0">
+                    <dt class="col-5">Submitted by</dt>
+                    <dd class="col-7">@Model.Idea.SubmitterName</dd>
+                    <dt class="col-5">Created</dt>
+                    <dd class="col-7">@Model.Idea.CreatedDate.ToString("MMM dd, yyyy")</dd>
+                    <dt class="col-5">Last updated</dt>
+                    <dd class="col-7">@Model.Idea.LastModifiedDate.ToString("MMM dd, yyyy")</dd>
+                </dl>
+            </div>
+        </div>
+
+        @if (Model.Idea.AuditHistory.Any())
+        {
+            <div class="card shadow-sm mt-3">
+                <div class="card-body">
+                    <h6 class="text-muted mb-3">Status History</h6>
+                    <ul class="list-unstyled mb-0">
+                        @foreach (var log in Model.Idea.AuditHistory)
+                        {
+                            <li class="mb-2 small">
+                                <i class="bi bi-arrow-right-circle text-primary me-1"></i>
+                                <strong>@log.OldStatus</strong> → <strong>@log.NewStatus</strong>
+                                <br />
+                                <span class="text-muted">by @log.ChangedByAdmin on @log.ChangedDate.ToString("MMM dd, yyyy")</span>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        }
+    </div>
+</div>

@@ -1,4 +1,7 @@
 <!-- SPECKIT START -->
-For additional context about technologies to be used, project structure,
-shell commands, and other important information, read the current plan
+
+For context about the Employee Innovation Ideas Management Portal feature,
+including technical architecture, data models, API contracts, and development
+setup, refer to: specs/001-innovation-ideas/plan.md
+
 <!-- SPECKIT END -->
