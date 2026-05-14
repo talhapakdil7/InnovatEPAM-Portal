@@ -51,8 +51,16 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.SetNull);
 
+            entity.Property(i => i.Category)
+                .HasMaxLength(50)
+                .IsRequired(false);
+
+            entity.Property(i => i.CategoryData)
+                .IsRequired(false);
+
             entity.HasIndex(i => i.SubmitterId);
             entity.HasIndex(i => i.Status);
+            entity.HasIndex(i => i.Category);
         });
 
         builder.Entity<IdeaAttachment>(entity =>

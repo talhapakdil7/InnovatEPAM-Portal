@@ -57,6 +57,24 @@
             </div>
         }
 
+        @if (Model.Idea.CategoryDataFields?.Any() == true)
+        {
+            <div class="card shadow-sm mt-3">
+                <div class="card-header fw-semibold">
+                    <i class="bi bi-tag me-2 text-primary"></i>@(Model.Idea.CategoryDisplayName ?? "Category") Details
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        @foreach (var field in Model.Idea.CategoryDataFields)
+                        {
+                            <dt class="col-sm-4">@field.Key</dt>
+                            <dd class="col-sm-8" style="white-space:pre-wrap">@field.Value</dd>
+                        }
+                    </dl>
+                </div>
+            </div>
+        }
+
         <div class="card shadow-sm mt-3 border-primary">
             <div class="card-header bg-primary text-white">
                 <i class="bi bi-arrow-repeat me-1"></i>Update Status
@@ -94,6 +112,17 @@
                 <dl class="row mb-0">
                     <dt class="col-5">Submitted by</dt>
                     <dd class="col-7">@Model.Idea.SubmitterName</dd>
+                    <dt class="col-5">Category</dt>
+                    <dd class="col-7">
+                        @if (Model.Idea.CategoryDisplayName != null)
+                        {
+                            <span class="badge bg-secondary">@Model.Idea.CategoryDisplayName</span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">Uncategorized</span>
+                        }
+                    </dd>
                     <dt class="col-5">Created</dt>
                     <dd class="col-7">@Model.Idea.CreatedDate.ToString("MMM dd, yyyy")</dd>
                     <dt class="col-5">Last updated</dt>

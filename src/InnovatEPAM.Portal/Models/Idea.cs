@@ -18,6 +18,16 @@ public class Idea
     public string? Description { get; set; }
     public IdeaStatus Status { get; set; } = IdeaStatus.Submitted;
 
+    /// <summary>
+    /// Innovation category key. Null for ideas submitted before this feature was introduced (displayed as "Uncategorized").
+    /// </summary>
+    public string? Category { get; set; }
+
+    /// <summary>
+    /// JSON-serialized key-value pairs of category-specific field answers. Null when no category is assigned.
+    /// </summary>
+    public string? CategoryData { get; set; }
+
     public Guid SubmitterId { get; set; }
     public ApplicationUser Submitter { get; set; } = null!;
 

@@ -10,7 +10,7 @@ Employee Innovation Ideas Management Portal: A web application enabling employee
 
 ## Technical Context
 
-**Language/Version**: C# 12 / .NET 8.0 (LTS)
+**Language/Version**: C# 12 / .NET 10.0
 
 **Primary Dependencies**:
 

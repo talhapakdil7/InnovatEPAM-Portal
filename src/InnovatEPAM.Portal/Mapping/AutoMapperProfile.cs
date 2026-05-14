@@ -10,11 +10,16 @@ public class AutoMapperProfile : Profile
     {
         CreateMap<Idea, IdeaListItemDTO>()
             .ForMember(d => d.Status, o => o.MapFrom(s => s.Status.ToString()))
-            .ForMember(d => d.SubmitterName, o => o.MapFrom(s => s.Submitter.FullName));
+            .ForMember(d => d.SubmitterName, o => o.MapFrom(s => s.Submitter.FullName))
+            .ForMember(d => d.Category, o => o.MapFrom(s => s.Category))
+            .ForMember(d => d.CategoryDisplayName, o => o.Ignore());
 
         CreateMap<Idea, IdeaDetailDTO>()
             .ForMember(d => d.Status, o => o.MapFrom(s => s.Status.ToString()))
-            .ForMember(d => d.SubmitterName, o => o.MapFrom(s => s.Submitter.FullName));
+            .ForMember(d => d.SubmitterName, o => o.MapFrom(s => s.Submitter.FullName))
+            .ForMember(d => d.Category, o => o.MapFrom(s => s.Category))
+            .ForMember(d => d.CategoryDisplayName, o => o.Ignore())
+            .ForMember(d => d.CategoryDataFields, o => o.Ignore());
 
         CreateMap<IdeaAttachment, IdeaAttachmentDTO>();
 

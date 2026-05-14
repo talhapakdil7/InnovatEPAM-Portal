@@ -19,9 +19,9 @@ public class AdminController : Controller
         _userManager = userManager;
     }
 
-    public async Task<IActionResult> Index(string? statusFilter)
+    public async Task<IActionResult> Index(string? statusFilter, string? categoryFilter)
     {
-        var ideas = await _ideaService.GetAllIdeasAsync(statusFilter);
+        var ideas = await _ideaService.GetAllIdeasAsync(statusFilter, categoryFilter);
 
         var statusSummary = ideas
             .GroupBy(i => i.Status)
@@ -31,7 +31,9 @@ public class AdminController : Controller
         {
             Ideas = ideas,
             StatusFilter = statusFilter,
+            CategoryFilter = categoryFilter,
             AvailableStatuses = Enum.GetNames<IdeaStatus>().ToList(),
+            AvailableCategories = CategoryDefinitions.All.ToDictionary(kv => kv.Key, kv => kv.Value.DisplayName),
             StatusSummary = statusSummary
         };
         return View(vm);

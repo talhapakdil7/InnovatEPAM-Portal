@@ -1,3 +1,4 @@
+using System.Text.Json;
 using AutoMapper;
 using InnovatEPAM.Portal.Data;
 using InnovatEPAM.Portal.DTOs;
@@ -35,6 +36,10 @@ public class IdeaService : IIdeaService
         _logger = logger;
     }
 
+    /// <summary>
+    /// Creates a new innovation idea, serializes category-specific field answers into JSON,
+    /// and persists any uploaded attachment to secure storage.
+    /// </summary>
     public async Task<(bool Success, string? Error, Guid IdeaId)> CreateIdeaAsync(Guid submitterId, CreateIdeaViewModel vm)
     {
         var idea = new Idea
@@ -45,7 +50,9 @@ public class IdeaService : IIdeaService
             SubmitterId = submitterId,
             Status = IdeaStatus.Submitted,
             CreatedDate = DateTime.UtcNow,
-            LastModifiedDate = DateTime.UtcNow
+            LastModifiedDate = DateTime.UtcNow,
+            Category = vm.Category,
+            CategoryData = BuildCategoryData(vm)
         };
 
         if (vm.Attachment != null)
@@ -77,6 +84,53 @@ public class IdeaService : IIdeaService
         return (true, null, idea.Id);
     }
 
+    /// <summary>
+    /// Serializes category-specific field answers from the view model into a JSON string.
+    /// Returns null when no category is selected or the category key is unrecognized.
+    /// </summary>
+    private static string? BuildCategoryData(CreateIdeaViewModel vm)
+    {
+        if (string.IsNullOrEmpty(vm.Category) || !CategoryDefinitions.All.ContainsKey(vm.Category))
+            return null;
+
+        var data = new Dictionary<string, string?>();
+
+        switch (vm.Category)
+        {
+            case CategoryDefinitions.TechnicalImprovement:
+                data["TechArea"] = vm.TechArea;
+                data["TechEffort"] = vm.TechEffort;
+                data["TechBenefit"] = vm.TechBenefit;
+                break;
+
+            case CategoryDefinitions.ProcessImprovement:
+                data["ProcDepartment"] = vm.ProcDepartment;
+                data["ProcPainPoint"] = vm.ProcPainPoint;
+                data["ProcSavings"] = vm.ProcSavings;
+                break;
+
+            case CategoryDefinitions.ClientSolution:
+                data["ClientSegment"] = vm.ClientSegment;
+                data["ClientProblem"] = vm.ClientProblem;
+                data["ClientImpact"] = vm.ClientImpact;
+                break;
+        }
+
+        return JsonSerializer.Serialize(data);
+    }
+
+    /// <summary>
+    /// Enriches a list of DTOs by resolving each item's CategoryDisplayName from the static registry.
+    /// </summary>
+    private static void EnrichCategoryDisplayNames(IEnumerable<IdeaListItemDTO> dtos)
+    {
+        foreach (var dto in dtos)
+        {
+            if (dto.Category != null && CategoryDefinitions.All.TryGetValue(dto.Category, out var def))
+                dto.CategoryDisplayName = def.DisplayName;
+        }
+    }
+
     public async Task<List<IdeaListItemDTO>> GetMyIdeasAsync(Guid submitterId, string? statusFilter)
     {
         var ideas = await _ideaRepo.GetBySubmitterAsync(submitterId);
@@ -84,7 +138,9 @@ public class IdeaService : IIdeaService
         if (!string.IsNullOrWhiteSpace(statusFilter) && Enum.TryParse<IdeaStatus>(statusFilter, out var status))
             ideas = ideas.Where(i => i.Status == status).ToList();
 
-        return _mapper.Map<List<IdeaListItemDTO>>(ideas);
+        var dtos = _mapper.Map<List<IdeaListItemDTO>>(ideas);
+        EnrichCategoryDisplayNames(dtos);
+        return dtos;
     }
 
     public async Task<IdeaDetailDTO?> GetIdeaDetailAsync(Guid ideaId, Guid userId, bool isAdmin)
@@ -93,17 +149,39 @@ public class IdeaService : IIdeaService
         if (idea == null) return null;
         if (!isAdmin && idea.SubmitterId != userId) return null;
 
-        return _mapper.Map<IdeaDetailDTO>(idea);
+        var dto = _mapper.Map<IdeaDetailDTO>(idea);
+
+        if (idea.Category != null && CategoryDefinitions.All.TryGetValue(idea.Category, out var catDef))
+        {
+            dto.CategoryDisplayName = catDef.DisplayName;
+
+            if (!string.IsNullOrEmpty(idea.CategoryData))
+            {
+                var raw = JsonSerializer.Deserialize<Dictionary<string, string>>(idea.CategoryData)
+                          ?? new Dictionary<string, string>();
+
+                dto.CategoryDataFields = catDef.Fields
+                    .Where(f => raw.TryGetValue(f.Key, out var val) && !string.IsNullOrEmpty(val))
+                    .ToDictionary(f => f.Label, f => raw[f.Key]);
+            }
+        }
+
+        return dto;
     }
 
-    public async Task<List<IdeaListItemDTO>> GetAllIdeasAsync(string? statusFilter)
+    public async Task<List<IdeaListItemDTO>> GetAllIdeasAsync(string? statusFilter, string? categoryFilter = null)
     {
         var ideas = await _ideaRepo.GetAllAsync();
 
         if (!string.IsNullOrWhiteSpace(statusFilter) && Enum.TryParse<IdeaStatus>(statusFilter, out var status))
             ideas = ideas.Where(i => i.Status == status).ToList();
 
-        return _mapper.Map<List<IdeaListItemDTO>>(ideas);
+        if (!string.IsNullOrWhiteSpace(categoryFilter) && CategoryDefinitions.All.ContainsKey(categoryFilter))
+            ideas = ideas.Where(i => i.Category == categoryFilter).ToList();
+
+        var dtos = _mapper.Map<List<IdeaListItemDTO>>(ideas);
+        EnrichCategoryDisplayNames(dtos);
+        return dtos;
     }
 
     public async Task<(bool Success, string? Error)> UpdateStatusAsync(Guid ideaId, string newStatus, Guid adminId)

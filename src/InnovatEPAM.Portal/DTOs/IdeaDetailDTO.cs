@@ -11,6 +11,19 @@ public class IdeaDetailDTO
     public DateTime LastModifiedDate { get; set; }
     public List<IdeaAttachmentDTO> Attachments { get; set; } = new();
     public List<AuditLogDTO> AuditHistory { get; set; } = new();
+
+    /// <summary>Raw category key. Null for pre-feature ideas.</summary>
+    public string? Category { get; set; }
+
+    /// <summary>Human-readable category name resolved by the service layer.</summary>
+    public string? CategoryDisplayName { get; set; }
+
+    /// <summary>
+    /// Category-specific field answers keyed by their human-readable label.
+    /// Example: {"Technology Area": "Backend", "Estimated Implementation Effort": "Medium — weeks"}.
+    /// Null when no category is assigned.
+    /// </summary>
+    public Dictionary<string, string>? CategoryDataFields { get; set; }
 }
 
 public class IdeaAttachmentDTO

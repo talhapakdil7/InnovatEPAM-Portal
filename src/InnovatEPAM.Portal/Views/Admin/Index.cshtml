@@ -1,6 +1,7 @@
 @model AdminIdeaListViewModel
 @{
     ViewData["Title"] = "Admin — All Ideas";
+    var hasFilters = !string.IsNullOrEmpty(Model.StatusFilter) || !string.IsNullOrEmpty(Model.CategoryFilter);
 }
 
 <h2 class="mb-4"><i class="bi bi-shield-check me-2"></i>Innovation Ideas Review</h2>
@@ -30,21 +31,38 @@
     </div>
 }
 
-<form method="get" class="d-flex gap-2 mb-4">
-    <select name="statusFilter" class="form-select w-auto">
-        <option value="">All Statuses</option>
-        @foreach (var status in Model.AvailableStatuses)
+<form method="get" class="d-flex flex-wrap gap-2 mb-4 align-items-end">
+    <div>
+        <label class="form-label small text-muted mb-1">Status</label>
+        <select name="statusFilter" class="form-select w-auto">
+            <option value="">All Statuses</option>
+            @foreach (var status in Model.AvailableStatuses)
+            {
+                <option value="@status" selected="@(Model.StatusFilter == status)">
+                    @status.Replace("UnderReview", "Under Review")
+                </option>
+            }
+        </select>
+    </div>
+    <div>
+        <label class="form-label small text-muted mb-1">Category</label>
+        <select name="categoryFilter" class="form-select w-auto">
+            <option value="">All Categories</option>
+            @foreach (var cat in Model.AvailableCategories)
+            {
+                <option value="@cat.Key" selected="@(Model.CategoryFilter == cat.Key)">@cat.Value</option>
+            }
+        </select>
+    </div>
+    <div class="d-flex gap-2 align-self-end">
+        <button type="submit" class="btn btn-outline-secondary">
+            <i class="bi bi-funnel me-1"></i>Filter
+        </button>
+        @if (hasFilters)
         {
-            <option value="@status" selected="@(Model.StatusFilter == status)">@status.Replace("UnderReview", "Under Review")</option>
+            <a asp-action="Index" class="btn btn-outline-danger"><i class="bi bi-x"></i>Clear</a>
         }
-    </select>
-    <button type="submit" class="btn btn-outline-secondary">
-        <i class="bi bi-funnel me-1"></i>Filter
-    </button>
-    @if (!string.IsNullOrEmpty(Model.StatusFilter))
-    {
-        <a asp-action="Index" class="btn btn-outline-danger"><i class="bi bi-x"></i>Clear</a>
-    }
+    </div>
 </form>
 
 @if (!Model.Ideas.Any())
@@ -61,6 +79,7 @@ else
             <thead class="table-light">
                 <tr>
                     <th>Title</th>
+                    <th>Category</th>
                     <th>Submitted By</th>
                     <th>Status</th>
                     <th>Date</th>
@@ -80,6 +99,16 @@ else
                     };
                     <tr>
                         <td class="fw-semibold">@idea.Title</td>
+                        <td>
+                            @if (idea.CategoryDisplayName != null)
+                            {
+                                <span class="badge bg-secondary bg-opacity-75">@idea.CategoryDisplayName</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted small">—</span>
+                            }
+                        </td>
                         <td>@idea.SubmitterName</td>
                         <td><span class="badge @badgeClass">@idea.Status.Replace("UnderReview", "Under Review")</span></td>
                         <td>@idea.CreatedDate.ToString("MMM dd, yyyy")</td>

@@ -18,6 +18,9 @@ public class IdeaDetailViewModel
 
 public class CreateIdeaViewModel
 {
+    /// <summary>Innovation category key. Required; drives dynamic form field visibility.</summary>
+    public string? Category { get; set; }
+
     [Required, StringLength(200, MinimumLength = 1)]
     public string Title { get; set; } = string.Empty;
 
@@ -26,6 +29,21 @@ public class CreateIdeaViewModel
 
     [Display(Name = "Attachment (PDF, DOC, DOCX, XLS, XLSX, JPG, PNG — max 10 MB)")]
     public IFormFile? Attachment { get; set; }
+
+    // Technical Improvement fields
+    public string? TechArea { get; set; }
+    public string? TechEffort { get; set; }
+    public string? TechBenefit { get; set; }
+
+    // Process Improvement fields
+    public string? ProcDepartment { get; set; }
+    public string? ProcPainPoint { get; set; }
+    public string? ProcSavings { get; set; }
+
+    // Client Solution fields
+    public string? ClientSegment { get; set; }
+    public string? ClientProblem { get; set; }
+    public string? ClientImpact { get; set; }
 }
 
 public class AdminIdeaListViewModel
@@ -34,6 +52,12 @@ public class AdminIdeaListViewModel
     public string? StatusFilter { get; set; }
     public List<string> AvailableStatuses { get; set; } = new();
     public Dictionary<string, int> StatusSummary { get; set; } = new();
+
+    /// <summary>Selected category filter key. Null = all categories (admin only, S1).</summary>
+    public string? CategoryFilter { get; set; }
+
+    /// <summary>All available category keys and display names for the filter dropdown.</summary>
+    public Dictionary<string, string> AvailableCategories { get; set; } = new();
 }
 
 public class AdminIdeaDetailViewModel
