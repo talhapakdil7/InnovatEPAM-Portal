@@ -1,0 +1,111 @@
+@model InnovatEPAM.Portal.ViewModels.BlindReviewSettingsViewModel
+@{
+    ViewData["Title"] = "Settings — Blind Review Mode";
+}
+
+<div class="container py-4" style="max-width: 640px;">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-controller="Admin" asp-action="Index">Ideas</a></li>
+            <li class="breadcrumb-item active">Settings</li>
+            <li class="breadcrumb-item active">Blind Review</li>
+        </ol>
+    </nav>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle me-2"></i>@TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle me-2"></i>@TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="card shadow-sm">
+        <div class="card-header d-flex align-items-center gap-2">
+            <i class="bi bi-eye-slash fs-5 text-primary"></i>
+            <h5 class="mb-0">Blind Review Mode</h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted mb-4">
+                When enabled, administrator reviewers cannot see the identity of idea submitters
+                (name, email, department) during the evaluation process. Identity is automatically
+                revealed once a final decision (Accepted / Rejected) is recorded.
+            </p>
+
+            <div class="d-flex align-items-center gap-3 mb-4 p-3 rounded border @(Model.IsEnabled ? "border-primary bg-primary bg-opacity-10" : "border-secondary bg-light")">
+                <i class="bi @(Model.IsEnabled ? "bi-eye-slash-fill text-primary" : "bi-eye text-secondary") fs-2"></i>
+                <div>
+                    <div class="fw-semibold fs-5">
+                        Blind Review is currently
+                        @if (Model.IsEnabled)
+                        {
+                            <span class="text-primary">Enabled</span>
+                        }
+                        else
+                        {
+                            <span class="text-secondary">Disabled</span>
+                        }
+                    </div>
+                    @if (Model.LastModifiedDate.HasValue)
+                    {
+                        <div class="small text-muted">
+                            Last changed
+                            @if (!string.IsNullOrEmpty(Model.LastModifiedByAdminName))
+                            {
+                                <span>by <strong>@Model.LastModifiedByAdminName</strong></span>
+                            }
+                            on @Model.LastModifiedDate.Value.ToLocalTime().ToString("MMM dd, yyyy 'at' HH:mm")
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="small text-muted">Default setting — never manually changed.</div>
+                    }
+                </div>
+            </div>
+
+            <form asp-action="BlindReview" method="post">
+                <div class="form-check form-switch mb-4">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="blindReviewToggle" name="IsEnabled"
+                           value="true" @(Model.IsEnabled ? "checked" : "") />
+                    <label class="form-check-label fw-semibold" for="blindReviewToggle">
+                        @(Model.IsEnabled ? "Disable Blind Review Mode" : "Enable Blind Review Mode")
+                    </label>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn @(Model.IsEnabled ? "btn-outline-secondary" : "btn-primary")">
+                        <i class="bi @(Model.IsEnabled ? "bi-eye" : "bi-eye-slash") me-1"></i>
+                        @(Model.IsEnabled ? "Disable Blind Review" : "Enable Blind Review")
+                    </button>
+                    <a asp-controller="Admin" asp-action="Index" class="btn btn-outline-secondary">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mt-3">
+        <div class="card-header">
+            <h6 class="mb-0 text-muted"><i class="bi bi-info-circle me-1"></i>How Blind Review Works</h6>
+        </div>
+        <div class="card-body">
+            <ul class="mb-0 small text-muted">
+                <li>Submitter names are replaced with <strong>"Anonymous Submitter"</strong> in all admin views.</li>
+                <li>The review workflow (stage advances, reverts, decisions) is fully functional.</li>
+                <li>Identity is <strong>automatically revealed</strong> once an idea is marked Accepted or Rejected.</li>
+                <li>Submitters always see their own information — their experience is unchanged.</li>
+                <li>Changes take effect on the next page load — no restart required.</li>
+            </ul>
+        </div>
+    </div>
+</div>

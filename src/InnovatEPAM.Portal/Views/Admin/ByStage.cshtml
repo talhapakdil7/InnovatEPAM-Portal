@@ -3,6 +3,14 @@
     ViewData["Title"] = $"Ideas at Stage: {ViewBag.StageName}";
 }
 
+@if ((bool)(ViewBag.IsBlindReviewActive ?? false))
+{
+    <div class="alert alert-info d-flex align-items-center mb-3" role="alert">
+        <i class="bi bi-eye-slash-fill me-2 fs-5"></i>
+        <strong>Blind review is active</strong> — submitter identities are hidden for ideas under evaluation.
+    </div>
+}
+
 <div class="d-flex align-items-center mb-3">
     <a asp-action="Index" class="btn btn-sm btn-outline-secondary me-3">
         <i class="bi bi-arrow-left"></i>
