@@ -14,6 +14,9 @@ public class IdeaDetailViewModel
 {
     public IdeaDetailDTO Idea { get; set; } = null!;
     public bool IsAdmin { get; set; }
+
+    /// <summary>True when the idea is in Draft status, enabling edit/delete actions in the view.</summary>
+    public bool IsDraft { get; set; }
 }
 
 public class CreateIdeaViewModel
@@ -72,4 +75,67 @@ public class UpdateStatusViewModel
 
     [Required]
     public string NewStatus { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// ViewModel for editing and saving/submitting an existing draft idea.
+/// </summary>
+public class EditDraftViewModel
+{
+    /// <summary>The ID of the draft being edited.</summary>
+    public Guid Id { get; set; }
+
+    /// <summary>Innovation category key. Drives dynamic form field visibility.</summary>
+    public string? Category { get; set; }
+
+    /// <summary>Idea title. Required only on submit; optional for draft save.</summary>
+    [Required, StringLength(200, MinimumLength = 1)]
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>Optional extended description of the idea.</summary>
+    [StringLength(2000)]
+    public string? Description { get; set; }
+
+    /// <summary>Existing attachment to display. Null when the draft has no attachment.</summary>
+    public IdeaAttachmentDTO? ExistingAttachment { get; set; }
+
+    /// <summary>When true, the existing attachment is removed on save.</summary>
+    public bool RemoveAttachment { get; set; }
+
+    /// <summary>New file to upload; replaces existing attachment when provided.</summary>
+    [Display(Name = "New Attachment (PDF, DOC, DOCX, XLS, XLSX, JPG, PNG — max 10 MB)")]
+    public IFormFile? Attachment { get; set; }
+
+    // ── Technical Improvement fields ──
+
+    /// <summary>Technology area selection for Technical Improvement category.</summary>
+    public string? TechArea { get; set; }
+
+    /// <summary>Estimated implementation effort for Technical Improvement category.</summary>
+    public string? TechEffort { get; set; }
+
+    /// <summary>Expected technical benefit description for Technical Improvement category.</summary>
+    public string? TechBenefit { get; set; }
+
+    // ── Process Improvement fields ──
+
+    /// <summary>Affected department or team for Process Improvement category.</summary>
+    public string? ProcDepartment { get; set; }
+
+    /// <summary>Description of the current process pain point.</summary>
+    public string? ProcPainPoint { get; set; }
+
+    /// <summary>Optional estimated savings for Process Improvement category.</summary>
+    public string? ProcSavings { get; set; }
+
+    // ── Client Solution fields ──
+
+    /// <summary>Target client segment for Client Solution category.</summary>
+    public string? ClientSegment { get; set; }
+
+    /// <summary>Description of the client problem being solved.</summary>
+    public string? ClientProblem { get; set; }
+
+    /// <summary>Expected business impact of the client solution.</summary>
+    public string? ClientImpact { get; set; }
 }

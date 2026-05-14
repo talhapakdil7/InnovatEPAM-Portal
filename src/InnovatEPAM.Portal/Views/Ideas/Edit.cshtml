@@ -1,23 +1,25 @@
-@model CreateIdeaViewModel
+@model EditDraftViewModel
 @{
-    ViewData["Title"] = "Submit New Idea";
+    ViewData["Title"] = $"Edit Draft — {Model.Title}";
 }
 
 <div class="row justify-content-center">
     <div class="col-md-8 col-lg-7">
         <div class="d-flex align-items-center mb-3">
-            <a asp-action="Index" class="btn btn-sm btn-outline-secondary me-3">
+            <a asp-action="Detail" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-secondary me-3">
                 <i class="bi bi-arrow-left"></i>
             </a>
-            <h2 class="mb-0"><i class="bi bi-lightbulb me-2 text-warning"></i>Submit New Idea</h2>
+            <h2 class="mb-0"><i class="bi bi-pencil-square me-2 text-secondary"></i>Edit Draft</h2>
+            <span class="badge bg-secondary bg-opacity-50 ms-3">Draft</span>
         </div>
 
         <div class="card shadow-sm">
             <div class="card-body p-4">
-                <form asp-action="Create" method="post" enctype="multipart/form-data">
+                <form asp-action="UpdateDraft" asp-route-id="@Model.Id" method="post" enctype="multipart/form-data">
+                    @Html.AntiForgeryToken()
                     <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
-                    @* Step 1: Category selection (FR-001) *@
+                    @* Category selection *@
                     <div class="mb-4">
                         <label asp-for="Category" class="form-label fw-semibold">
                             Innovation Category <span class="text-danger">*</span>
@@ -29,11 +31,8 @@
                                 <option value="@cat.Key">@cat.DisplayName</option>
                             }
                         </select>
-                        <div class="form-text">Choose the category that best describes your innovation idea.</div>
                         <span asp-validation-for="Category" class="text-danger small"></span>
                     </div>
-
-                    @* Step 2: Category-specific fields (FR-002, FR-003, FR-004) rendered server-side, shown/hidden by JS *@
 
                     @* Technical Improvement section *@
                     <div id="section-TechnicalImprovement" class="category-section card border-primary mb-4" style="display:none">
@@ -42,7 +41,7 @@
                         </div>
                         <div class="card-body">
                             <div class="mb-3">
-                                <label for="TechArea" class="form-label fw-semibold">
+                                <label asp-for="TechArea" class="form-label fw-semibold">
                                     Technology Area <span class="text-danger">*</span>
                                 </label>
                                 <select asp-for="TechArea" class="form-select">
@@ -56,9 +55,8 @@
                                 <div class="form-text">@CategoryDefinitions.All[CategoryDefinitions.TechnicalImprovement].Fields.First(f => f.Key == "TechArea").GuidanceHint</div>
                                 <span asp-validation-for="TechArea" class="text-danger small"></span>
                             </div>
-
                             <div class="mb-3">
-                                <label for="TechEffort" class="form-label fw-semibold">
+                                <label asp-for="TechEffort" class="form-label fw-semibold">
                                     Estimated Implementation Effort <span class="text-danger">*</span>
                                 </label>
                                 <select asp-for="TechEffort" class="form-select">
@@ -72,9 +70,8 @@
                                 <div class="form-text">@CategoryDefinitions.All[CategoryDefinitions.TechnicalImprovement].Fields.First(f => f.Key == "TechEffort").GuidanceHint</div>
                                 <span asp-validation-for="TechEffort" class="text-danger small"></span>
                             </div>
-
                             <div class="mb-3">
-                                <label for="TechBenefit" class="form-label fw-semibold">
+                                <label asp-for="TechBenefit" class="form-label fw-semibold">
                                     Expected Technical Benefit <span class="text-danger">*</span>
                                 </label>
                                 <textarea asp-for="TechBenefit" class="form-control" rows="4" maxlength="500"
@@ -92,7 +89,7 @@
                         </div>
                         <div class="card-body">
                             <div class="mb-3">
-                                <label for="ProcDepartment" class="form-label fw-semibold">
+                                <label asp-for="ProcDepartment" class="form-label fw-semibold">
                                     Affected Department or Team <span class="text-danger">*</span>
                                 </label>
                                 <input asp-for="ProcDepartment" class="form-control" maxlength="100"
@@ -100,9 +97,8 @@
                                 <div class="form-text">@CategoryDefinitions.All[CategoryDefinitions.ProcessImprovement].Fields.First(f => f.Key == "ProcDepartment").GuidanceHint</div>
                                 <span asp-validation-for="ProcDepartment" class="text-danger small"></span>
                             </div>
-
                             <div class="mb-3">
-                                <label for="ProcPainPoint" class="form-label fw-semibold">
+                                <label asp-for="ProcPainPoint" class="form-label fw-semibold">
                                     Current Process Pain Point <span class="text-danger">*</span>
                                 </label>
                                 <textarea asp-for="ProcPainPoint" class="form-control" rows="4" maxlength="500"
@@ -110,9 +106,8 @@
                                 <div class="form-text">@CategoryDefinitions.All[CategoryDefinitions.ProcessImprovement].Fields.First(f => f.Key == "ProcPainPoint").GuidanceHint Max 500 chars.</div>
                                 <span asp-validation-for="ProcPainPoint" class="text-danger small"></span>
                             </div>
-
                             <div class="mb-3">
-                                <label for="ProcSavings" class="form-label fw-semibold">
+                                <label asp-for="ProcSavings" class="form-label fw-semibold">
                                     Estimated Savings
                                 </label>
                                 <input asp-for="ProcSavings" class="form-control" maxlength="200"
@@ -130,7 +125,7 @@
                         </div>
                         <div class="card-body">
                             <div class="mb-3">
-                                <label for="ClientSegment" class="form-label fw-semibold">
+                                <label asp-for="ClientSegment" class="form-label fw-semibold">
                                     Target Client Segment <span class="text-danger">*</span>
                                 </label>
                                 <input asp-for="ClientSegment" class="form-control" maxlength="200"
@@ -138,9 +133,8 @@
                                 <div class="form-text">@CategoryDefinitions.All[CategoryDefinitions.ClientSolution].Fields.First(f => f.Key == "ClientSegment").GuidanceHint</div>
                                 <span asp-validation-for="ClientSegment" class="text-danger small"></span>
                             </div>
-
                             <div class="mb-3">
-                                <label for="ClientProblem" class="form-label fw-semibold">
+                                <label asp-for="ClientProblem" class="form-label fw-semibold">
                                     Client Problem Being Solved <span class="text-danger">*</span>
                                 </label>
                                 <textarea asp-for="ClientProblem" class="form-control" rows="4" maxlength="500"
@@ -148,9 +142,8 @@
                                 <div class="form-text">@CategoryDefinitions.All[CategoryDefinitions.ClientSolution].Fields.First(f => f.Key == "ClientProblem").GuidanceHint Max 500 chars.</div>
                                 <span asp-validation-for="ClientProblem" class="text-danger small"></span>
                             </div>
-
                             <div class="mb-3">
-                                <label for="ClientImpact" class="form-label fw-semibold">
+                                <label asp-for="ClientImpact" class="form-label fw-semibold">
                                     Expected Business Impact <span class="text-danger">*</span>
                                 </label>
                                 <input asp-for="ClientImpact" class="form-control" maxlength="300"
@@ -161,7 +154,7 @@
                         </div>
                     </div>
 
-                    @* Step 3: Common fields (U2: Title moved below category section per spec) *@
+                    @* Common fields *@
                     <div class="mb-3">
                         <label asp-for="Title" class="form-label fw-semibold">Title <span class="text-danger">*</span></label>
                         <input asp-for="Title" class="form-control" placeholder="Give your idea a clear, concise title" maxlength="200" />
@@ -178,8 +171,25 @@
                         <span asp-validation-for="Description" class="text-danger small"></span>
                     </div>
 
+                    @* Attachment management *@
                     <div class="mb-4">
-                        <label asp-for="Attachment" class="form-label fw-semibold">Attachment</label>
+                        <label class="form-label fw-semibold">Attachment</label>
+                        @if (Model.ExistingAttachment != null)
+                        {
+                            <div class="mb-2 p-2 border rounded d-flex align-items-center gap-2 bg-light">
+                                <i class="bi bi-file-earmark text-muted"></i>
+                                <span>@Model.ExistingAttachment.FileName</span>
+                                <small class="text-muted ms-1">(@((Model.ExistingAttachment.FileSize / 1024.0).ToString("F0")) KB)</small>
+                                <a asp-controller="Ideas" asp-action="Download" asp-route-attachmentId="@Model.ExistingAttachment.Id"
+                                   class="btn btn-sm btn-outline-secondary ms-auto">
+                                    <i class="bi bi-download"></i>
+                                </a>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input asp-for="RemoveAttachment" class="form-check-input" type="checkbox" />
+                                <label asp-for="RemoveAttachment" class="form-check-label text-danger">Remove attachment</label>
+                            </div>
+                        }
                         <input asp-for="Attachment" class="form-control" type="file"
                                accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" />
                         <div class="form-text">@Html.DisplayNameFor(m => m.Attachment)</div>
@@ -187,11 +197,12 @@
                     </div>
 
                     <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-send me-1"></i>Submit Idea
-                        </button>
-                        <button type="submit" formaction="@Url.Action("SaveDraft")" class="btn btn-outline-secondary">
+                        <button type="submit" class="btn btn-outline-secondary">
                             <i class="bi bi-floppy me-1"></i>Save as Draft
+                        </button>
+                        <button type="submit" formaction="@Url.Action("SubmitDraft", new { id = Model.Id })"
+                                class="btn btn-primary">
+                            <i class="bi bi-send me-1"></i>Submit
                         </button>
                         <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
                     </div>
@@ -204,13 +215,9 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script src="~/js/category-form.js" asp-append-version="true"></script>
-    @if (Model.Category != null)
-    {
-        <script>
-            // Re-apply category on validation failure (server-side redirect back)
-            document.addEventListener('DOMContentLoaded', function () {
-                initCategoryForm('@Model.Category');
-            });
-        </script>
-    }
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            initCategoryForm('@Model.Category');
+        });
+    </script>
 }

@@ -4,6 +4,7 @@ using InnovatEPAM.Portal.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using InnovatEPAM.Portal.DTOs;
 
 namespace InnovatEPAM.Portal.Controllers;
 
@@ -54,6 +55,22 @@ public class IdeasController : Controller
         return RedirectToAction(nameof(Detail), new { id = ideaId });
     }
 
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> SaveDraft(CreateIdeaViewModel vm)
+    {
+        var userId = Guid.Parse(_userManager.GetUserId(User)!);
+        var (success, error, draftId) = await _ideaService.SaveDraftAsync(userId, vm);
+
+        if (!success)
+        {
+            ModelState.AddModelError(string.Empty, error ?? "Failed to save draft.");
+            return View("Create", vm);
+        }
+
+        TempData["Success"] = "Draft saved.";
+        return RedirectToAction(nameof(Edit), new { id = draftId });
+    }
+
     public async Task<IActionResult> Detail(Guid id)
     {
         var userId = Guid.Parse(_userManager.GetUserId(User)!);
@@ -62,7 +79,115 @@ public class IdeasController : Controller
 
         if (idea == null) return NotFound();
 
-        return View(new IdeaDetailViewModel { Idea = idea, IsAdmin = isAdmin });
+        return View(new IdeaDetailViewModel
+        {
+            Idea = idea,
+            IsAdmin = isAdmin,
+            IsDraft = idea.Status == "Draft"
+        });
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteDraft(Guid id)
+    {
+        var userId = Guid.Parse(_userManager.GetUserId(User)!);
+        var (success, error) = await _ideaService.DeleteDraftAsync(id, userId);
+
+        if (!success)
+            TempData["Error"] = error ?? "Failed to delete draft.";
+        else
+            TempData["Success"] = "Draft deleted.";
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Edit(Guid id)
+    {
+        var userId = Guid.Parse(_userManager.GetUserId(User)!);
+        var idea = await _ideaService.GetIdeaDetailAsync(id, userId, isAdmin: false);
+
+        if (idea == null || idea.Status != "Draft") return NotFound();
+
+        var vm = new EditDraftViewModel
+        {
+            Id = id,
+            Category = idea.Category,
+            Title = idea.Title,
+            Description = idea.Description,
+            ExistingAttachment = idea.Attachments.FirstOrDefault()
+        };
+
+        // Populate category fields from CategoryDataFields (key = label, value = answer)
+        if (idea.CategoryDataFields != null && idea.Category != null
+            && CategoryDefinitions.All.TryGetValue(idea.Category, out var catDef))
+        {
+            foreach (var field in catDef.Fields)
+            {
+                var matchingEntry = idea.CategoryDataFields
+                    .FirstOrDefault(kv => kv.Key == field.Label);
+
+                if (matchingEntry.Key == null) continue;
+
+                switch (field.Key)
+                {
+                    case "TechArea":     vm.TechArea = matchingEntry.Value; break;
+                    case "TechEffort":   vm.TechEffort = matchingEntry.Value; break;
+                    case "TechBenefit":  vm.TechBenefit = matchingEntry.Value; break;
+                    case "ProcDepartment": vm.ProcDepartment = matchingEntry.Value; break;
+                    case "ProcPainPoint":  vm.ProcPainPoint = matchingEntry.Value; break;
+                    case "ProcSavings":    vm.ProcSavings = matchingEntry.Value; break;
+                    case "ClientSegment":  vm.ClientSegment = matchingEntry.Value; break;
+                    case "ClientProblem":  vm.ClientProblem = matchingEntry.Value; break;
+                    case "ClientImpact":   vm.ClientImpact = matchingEntry.Value; break;
+                }
+            }
+        }
+
+        return View(vm);
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateDraft(Guid id, EditDraftViewModel vm)
+    {
+        var userId = Guid.Parse(_userManager.GetUserId(User)!);
+        var (success, error) = await _ideaService.UpdateDraftAsync(id, userId, vm);
+
+        if (!success)
+        {
+            ModelState.AddModelError(string.Empty, error ?? "Failed to update draft.");
+            vm.Id = id;
+            return View("Edit", vm);
+        }
+
+        TempData["Success"] = "Draft saved.";
+        return RedirectToAction(nameof(Edit), new { id });
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> SubmitDraft(Guid id, EditDraftViewModel vm)
+    {
+        if (!ModelState.IsValid)
+        {
+            vm.Id = id;
+            var userId2 = Guid.Parse(_userManager.GetUserId(User)!);
+            var existing = await _ideaService.GetIdeaDetailAsync(id, userId2, isAdmin: false);
+            vm.ExistingAttachment = existing?.Attachments.FirstOrDefault();
+            return View("Edit", vm);
+        }
+
+        var userId = Guid.Parse(_userManager.GetUserId(User)!);
+        var (success, error) = await _ideaService.SubmitDraftAsync(id, userId, vm);
+
+        if (!success)
+        {
+            ModelState.AddModelError(string.Empty, error ?? "Failed to submit draft.");
+            vm.Id = id;
+            return View("Edit", vm);
+        }
+
+        TempData["Success"] = "Idea submitted successfully.";
+        return RedirectToAction(nameof(Detail), new { id });
     }
 
     public async Task<IActionResult> Download(Guid attachmentId)

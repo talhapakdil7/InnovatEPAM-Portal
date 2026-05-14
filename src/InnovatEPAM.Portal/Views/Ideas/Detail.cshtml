@@ -3,6 +3,7 @@
     ViewData["Title"] = Model.Idea.Title;
     var badgeClass = Model.Idea.Status switch
     {
+        "Draft" => "bg-secondary bg-opacity-50",
         "Submitted" => "bg-secondary",
         "UnderReview" => "bg-warning text-dark",
         "Accepted" => "bg-success",
@@ -18,6 +19,22 @@
     <h2 class="mb-0 text-truncate">@Model.Idea.Title</h2>
     <span class="badge @badgeClass ms-3">@Model.Idea.Status.Replace("UnderReview", "Under Review")</span>
 </div>
+
+@if (Model.IsDraft)
+{
+    <div class="d-flex gap-2 mb-3">
+        <a asp-action="Edit" asp-route-id="@Model.Idea.Id" class="btn btn-outline-primary">
+            <i class="bi bi-pencil me-1"></i>Edit Draft
+        </a>
+        <form asp-action="DeleteDraft" method="post" onsubmit="return confirm('Are you sure you want to permanently delete this draft?');">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" value="@Model.Idea.Id" />
+            <button type="submit" class="btn btn-outline-danger">
+                <i class="bi bi-trash me-1"></i>Delete Draft
+            </button>
+        </form>
+    </div>
+}
 
 <div class="row g-4">
     <div class="col-lg-8">
@@ -79,6 +96,36 @@
     </div>
 
     <div class="col-lg-4">
+        @if (Model.Idea.Status == "UnderReview" && Model.Idea.CurrentReviewStageOrder > 0)
+        {
+            <div class="card shadow-sm mb-3 border-primary">
+                <div class="card-header bg-primary text-white">
+                    <i class="bi bi-diagram-3 me-1"></i>Review Progress
+                </div>
+                <div class="card-body">
+                    @{
+                        var stages = new[] { "Initial Screening", "Technical Review", "Business Impact Assessment", "Final Decision" };
+                        var currentOrder = Model.Idea.CurrentReviewStageOrder;
+                    }
+                    <p class="small text-muted mb-3">Your idea is currently being evaluated.</p>
+                    <div class="d-flex flex-column gap-2">
+                        @for (int i = 1; i <= 4; i++)
+                        {
+                            var isDone = i < currentOrder;
+                            var isCurrent = i == currentOrder;
+                            var iconClass = isDone ? "bi-check-circle-fill text-success"
+                                : isCurrent ? "bi-record-circle-fill text-primary"
+                                : "bi-circle text-muted";
+                            <div class="d-flex align-items-center gap-2 @(isCurrent ? "fw-semibold" : "text-muted")">
+                                <i class="bi @iconClass fs-5"></i>
+                                <span class="small">@stages[i - 1]</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
         <div class="card shadow-sm">
             <div class="card-body">
                 <h6 class="card-subtitle text-muted mb-3">Details</h6>
