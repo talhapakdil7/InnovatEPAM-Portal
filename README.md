@@ -17,6 +17,20 @@ InnovatEPAM Portal, çalışanların inovasyon fikirlerini sunmasını, yönetic
 - **Ek Dosya Desteği:** Güvenli depolama ve virüs kontrolü
 - **Denetim İzleri:** Tüm durum değişiklikleri ve kararları kaydı
 
+### 📸 Ekran görüntüleri
+
+Aşağıdaki görseller `screenshots/` klasöründedir (InnovatEPAM Portal arayüzü):
+
+| # | Önizleme |
+|---|----------|
+| 1 | ![InnovatEPAM Portal — ekran görüntüsü 1](screenshots/Screenshot%202026-05-15%20at%2014.36.59.png) |
+| 2 | ![InnovatEPAM Portal — ekran görüntüsü 2](screenshots/Screenshot%202026-05-15%20at%2014.37.17.png) |
+| 3 | ![InnovatEPAM Portal — ekran görüntüsü 3](screenshots/Screenshot%202026-05-15%20at%2014.37.44.png) |
+| 4 | ![InnovatEPAM Portal — ekran görüntüsü 4](screenshots/Screenshot%202026-05-15%20at%2014.39.06.png) |
+| 5 | ![InnovatEPAM Portal — ekran görüntüsü 5](screenshots/Screenshot%202026-05-15%20at%2014.39.40.png) |
+
+Dosya adları: `Screenshot 2026-05-15 at … .png`. Yerelde veya GitHub’da görüntülenmezse dosya yolunun doğru olduğundan ve görsellerin commit edildiğinden emin olun.
+
 ---
 
 ## 🛠️ Teknoloji Yığını
@@ -35,6 +49,7 @@ InnovatEPAM Portal, çalışanların inovasyon fikirlerini sunmasını, yönetic
 
 ```
 InnovatEPAM Portal
+├── screenshots/               # Proje ekran görüntüleri (README’de referanslı)
 ├── docs/
 │   └── KURULUM.md              # Kurulum ve işletim rehberi (Türkçe)
 ├── specs/
@@ -274,6 +289,7 @@ dotnet run --urls="https://localhost:5002"
 
 ## 📖 İlave Belgeler
 
+- 📸 **[screenshots/](screenshots/)** – Proje arayüzü ekran görüntüleri (README’de de gömülü)
 - 📄 **[KURULUM.md](docs/KURULUM.md)** – Detaylı kurulum ve işletim rehberi (Türkçe)
 - 📋 **[Spec Dökümanları](specs/)** – Her özellik için teknik tasarım
 
