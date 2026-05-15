@@ -155,9 +155,6 @@ namespace InnovatEPAM.Portal.Data.Migrations
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int?>("CurrentReviewStage")
-                        .HasColumnType("integer");
-
                     b.Property<string>("Description")
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
@@ -257,53 +254,6 @@ namespace InnovatEPAM.Portal.Data.Migrations
                     b.HasIndex("IdeaId");
 
                     b.ToTable("IdeaScores", (string)null);
-                });
-
-            modelBuilder.Entity("InnovatEPAM.Portal.Models.StageTransition", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<int?>("FromStage")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid>("IdeaId")
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("IsAdvance")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Notes")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<string>("Outcome")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("RevertReason")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<int>("ToStage")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("TransitionDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("TransitionedByAdminId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("IdeaId");
-
-                    b.HasIndex("TransitionDate");
-
-                    b.HasIndex("TransitionedByAdminId");
-
-                    b.ToTable("StageTransitions", (string)null);
                 });
 
             modelBuilder.Entity("InnovatEPAM.Portal.Models.SystemSetting", b =>
@@ -551,25 +501,6 @@ namespace InnovatEPAM.Portal.Data.Migrations
                     b.Navigation("Idea");
                 });
 
-            modelBuilder.Entity("InnovatEPAM.Portal.Models.StageTransition", b =>
-                {
-                    b.HasOne("InnovatEPAM.Portal.Models.Idea", "Idea")
-                        .WithMany("StageTransitions")
-                        .HasForeignKey("IdeaId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("InnovatEPAM.Portal.Models.ApplicationUser", "TransitionedByAdmin")
-                        .WithMany()
-                        .HasForeignKey("TransitionedByAdminId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Idea");
-
-                    b.Navigation("TransitionedByAdmin");
-                });
-
             modelBuilder.Entity("InnovatEPAM.Portal.Models.SystemSetting", b =>
                 {
                     b.HasOne("InnovatEPAM.Portal.Models.ApplicationUser", "LastModifiedByAdmin")
@@ -647,8 +578,6 @@ namespace InnovatEPAM.Portal.Data.Migrations
                     b.Navigation("IdeaAttachments");
 
                     b.Navigation("Scores");
-
-                    b.Navigation("StageTransitions");
                 });
 #pragma warning restore 612, 618
         }

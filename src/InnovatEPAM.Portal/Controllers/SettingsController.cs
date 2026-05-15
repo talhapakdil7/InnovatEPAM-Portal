@@ -53,8 +53,8 @@ public class SettingsController : Controller
         await _blindReviewService.SetEnabledAsync(vm.IsEnabled, adminId);
 
         TempData["Success"] = vm.IsEnabled
-            ? "Blind review mode has been enabled. Submitter identities are now hidden during evaluation."
-            : "Blind review mode has been disabled. Submitter identities are now visible.";
+            ? "Blind review is on. Submitter identities are hidden during evaluation."
+            : "Blind review is off. Submitter identities are visible.";
 
         return RedirectToAction(nameof(BlindReview));
     }

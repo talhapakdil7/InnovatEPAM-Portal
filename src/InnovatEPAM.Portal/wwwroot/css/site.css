@@ -1,15 +1,19 @@
-html {
-  font-size: 14px;
+/* App-level tweaks; design system lives in ~/css/portal/*.css */
+
+/*
+ * Auth shell (logged-out): Razor uses Tailwind max-w-* on the inner wrapper,
+ * but prebuilt app.min.css may not include those utilities — leaving only w-full
+ * makes the login card stretch edge-to-edge. These rules always apply after Tailwind.
+ */
+.auth-layout-inner {
+  width: 100%;
+  max-width: 26.25rem; /* ~420px */
+  margin-left: auto;
+  margin-right: auto;
 }
 
-@media (min-width: 768px) {
-  html {
-    font-size: 16px;
-  }
-}
-
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+.auth-layout-inner--register {
+  max-width: 36rem; /* wider two-column registration */
 }
 
 html {
@@ -17,15 +21,23 @@ html {
   min-height: 100%;
 }
 
-body {
-  margin-bottom: 60px;
+.btn:focus-visible,
+.form-control:focus-visible,
+.form-check-input:focus-visible,
+.dropdown-toggle:focus-visible {
+  outline: 2px solid rgba(79, 70, 229, 0.45);
+  outline-offset: 2px;
+  box-shadow: none;
 }
 
-.form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
-  color: var(--bs-secondary-color);
-  text-align: end;
+/* Match floating placeholders to portal rhythm */
+.form-floating > .form-control-plaintext::placeholder,
+.form-floating > .form-control::placeholder {
+  color: var(--portal-text-muted);
+  opacity: 0.8;
 }
 
-.form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
-  text-align: start;
+.form-floating > .form-control-plaintext:focus::placeholder,
+.form-floating > .form-control:focus::placeholder {
+  color: inherit;
 }

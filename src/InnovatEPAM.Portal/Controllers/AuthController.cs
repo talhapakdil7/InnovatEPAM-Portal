@@ -1,6 +1,8 @@
+using InnovatEPAM.Portal.Models;
 using InnovatEPAM.Portal.Services.Interfaces;
 using InnovatEPAM.Portal.ViewModels;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace InnovatEPAM.Portal.Controllers;
@@ -8,11 +10,22 @@ namespace InnovatEPAM.Portal.Controllers;
 public class AuthController : Controller
 {
     private readonly IAuthService _authService;
+    private readonly UserManager<ApplicationUser> _userManager;
 
-    public AuthController(IAuthService authService) => _authService = authService;
+    public AuthController(IAuthService authService, UserManager<ApplicationUser> userManager)
+    {
+        _authService = authService;
+        _userManager = userManager;
+    }
 
     [HttpGet]
-    public IActionResult Register() => User.Identity?.IsAuthenticated == true ? RedirectToAction("Index", "Ideas") : View();
+    public IActionResult Register()
+    {
+        if (User.Identity?.IsAuthenticated != true) return View();
+
+        if (User.IsInRole("Admin")) return RedirectToAction("Dashboard", "Admin");
+        return RedirectToAction("Index", "Ideas");
+    }
 
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Register(RegisterViewModel vm)
@@ -26,14 +39,19 @@ public class AuthController : Controller
             return View(vm);
         }
 
-        TempData["Success"] = "Account created successfully. Please log in.";
+        TempData["Success"] = "Account created. You can sign in.";
         return RedirectToAction(nameof(Login));
     }
 
     [HttpGet]
     public IActionResult Login(string? returnUrl = null)
     {
-        if (User.Identity?.IsAuthenticated == true) return RedirectToAction("Index", "Ideas");
+        if (User.Identity?.IsAuthenticated == true)
+        {
+            if (User.IsInRole("Admin")) return RedirectToAction("Dashboard", "Admin");
+            return RedirectToAction("Index", "Ideas");
+        }
+
         ViewData["ReturnUrl"] = returnUrl;
         return View();
     }
@@ -43,15 +61,22 @@ public class AuthController : Controller
     {
         if (!ModelState.IsValid) return View(vm);
 
-        var success = await _authService.LoginAsync(vm.Email, vm.Password, vm.RememberMe);
+        var (success, lockedOut) = await _authService.LoginAsync(vm.Email, vm.Password, vm.RememberMe);
         if (!success)
         {
-            ModelState.AddModelError(string.Empty, "Invalid email or password.");
+            ModelState.AddModelError(string.Empty,
+                lockedOut
+                    ? "Too many failed attempts. Your account is temporarily locked; try again later."
+                    : "Invalid email or password.");
             return View(vm);
         }
 
         if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
             return Redirect(returnUrl);
+
+        var user = await _userManager.FindByEmailAsync(vm.Email);
+        if (user != null && await _userManager.IsInRoleAsync(user, "Admin"))
+            return RedirectToAction("Dashboard", "Admin");
 
         return RedirectToAction("Index", "Ideas");
     }

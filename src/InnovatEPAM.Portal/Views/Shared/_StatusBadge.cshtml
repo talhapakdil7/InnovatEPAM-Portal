@@ -1,0 +1,15 @@
+@model string?
+@{
+    var raw = Model ?? string.Empty;
+    var display = raw.Replace("UnderReview", "Under Review", StringComparison.Ordinal);
+    var cls = raw switch
+    {
+        "Draft" => "portal-badge-soft portal-badge-draft",
+        "Submitted" => "portal-badge-soft portal-badge-submitted",
+        "UnderReview" => "portal-badge-soft portal-badge-review",
+        "Accepted" => "portal-badge-soft portal-badge-success",
+        "Rejected" => "portal-badge-soft portal-badge-danger",
+        _ => "portal-badge-soft portal-badge-submitted",
+    };
+}
+<span class="@cls">@display</span>

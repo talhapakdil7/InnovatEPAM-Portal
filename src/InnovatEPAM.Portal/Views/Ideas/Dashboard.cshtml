@@ -1,0 +1,15 @@
+@* Legacy /Ideas/Dashboard URLs: controller redirects to Index; minimal page for Razor compile. *@
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="refresh" content="0;url=@Url.Action("Index", "Ideas")" />
+    <title>Redirecting…</title>
+</head>
+<body>
+    <p><a href="@Url.Action("Index", "Ideas")">Go to my ideas</a></p>
+</body>
+</html>

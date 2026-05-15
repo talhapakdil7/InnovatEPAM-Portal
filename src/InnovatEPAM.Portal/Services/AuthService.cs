@@ -42,7 +42,7 @@ public class AuthService : IAuthService
         return (true, Enumerable.Empty<string>());
     }
 
-    public async Task<bool> LoginAsync(string email, string password, bool rememberMe)
+    public async Task<(bool Success, bool IsLockedOut)> LoginAsync(string email, string password, bool rememberMe)
     {
         var result = await _signInManager.PasswordSignInAsync(email, password, rememberMe, lockoutOnFailure: true);
         if (result.Succeeded)
@@ -50,7 +50,7 @@ public class AuthService : IAuthService
         else
             _logger.LogWarning("Failed login attempt for: {Email}", email);
 
-        return result.Succeeded;
+        return (result.Succeeded, result.IsLockedOut);
     }
 
     public async Task LogoutAsync()

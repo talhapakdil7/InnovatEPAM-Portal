@@ -28,3 +28,6 @@ upload_storage/
 
 # Build outputs
 publish/
+
+# Node (Tailwind — src/InnovatEPAM.Portal)
+node_modules/

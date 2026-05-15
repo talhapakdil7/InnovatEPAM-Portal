@@ -140,6 +140,12 @@ public class IdeaService : IIdeaService
 
         var dtos = _mapper.Map<List<IdeaListItemDTO>>(ideas);
         EnrichCategoryDisplayNames(dtos);
+        for (var i = 0; i < ideas.Count; i++)
+        {
+            dtos[i].CanDeleteAsOwner = OwnerMayDeleteIdea(ideas[i]);
+            dtos[i].DeleteBlockedHint = dtos[i].CanDeleteAsOwner ? null : DeleteBlockedHint(ideas[i]);
+        }
+
         return dtos;
     }
 
@@ -166,12 +172,76 @@ public class IdeaService : IIdeaService
             }
         }
 
-        dto.StageHistory = idea.StageTransitions
-            .OrderBy(t => t.TransitionDate)
-            .Select(t => _mapper.Map<StageTransitionDTO>(t))
+        dto.StageHistory = idea.AuditLogs
+            .OrderBy(t => t.ChangedDate)
+            .Select(t => _mapper.Map<AuditLogDTO>(t))
             .ToList();
 
+        if (!isAdmin)
+            dto.CanAmendSubmitted = SubmitterMayAmendSubmitted(idea);
+
+        if (!isAdmin)
+            dto.CanDeleteAsOwner = OwnerMayDeleteIdea(idea);
+
         return dto;
+    }
+
+    /// <summary>
+    /// Submitter may edit/withdraw a submitted idea only before any reviewer scores it.
+    /// </summary>
+    private static bool SubmitterMayAmendSubmitted(Idea idea)
+    {
+        if (idea.Status != IdeaStatus.Submitted) return false;
+        if (idea.Scores.Count > 0) return false;
+        return true;
+    }
+
+    /// <summary>
+    /// Whether the submitter may permanently remove this idea (draft, triage-only submission, or finished decision).
+    /// </summary>
+    private static bool OwnerMayDeleteIdea(Idea idea) => idea.Status switch
+    {
+        IdeaStatus.Draft => true,
+        IdeaStatus.Submitted => SubmitterMayAmendSubmitted(idea),
+        IdeaStatus.UnderReview => false,
+        IdeaStatus.Accepted => true,
+        IdeaStatus.Rejected => true,
+        _ => false
+    };
+
+    private static string DeleteBlockedHint(Idea idea) => idea.Status switch
+    {
+        IdeaStatus.UnderReview => "Cannot delete while this idea is under review.",
+        IdeaStatus.Submitted => "Review has started; contact an administrator if you need it removed.",
+        _ => "This idea cannot be deleted right now."
+    };
+
+    private async Task RemoveIdeaCoreAsync(Idea idea)
+    {
+        foreach (var att in idea.IdeaAttachments)
+        {
+            var absPath = Path.Combine(_env.ContentRootPath, att.FilePath);
+            if (File.Exists(absPath)) File.Delete(absPath);
+        }
+
+        _db.Set<Idea>().Remove(idea);
+        await _db.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Permanently removes an idea owned by the submitter when policy allows (see <see cref="OwnerMayDeleteIdea"/>).
+    /// </summary>
+    public async Task<(bool Success, string? Error)> DeleteMyIdeaAsync(Guid ideaId, Guid submitterId)
+    {
+        var idea = await _ideaRepo.GetByIdAsync(ideaId);
+        if (idea == null || idea.SubmitterId != submitterId)
+            return (false, "Not found or access denied.");
+        if (!OwnerMayDeleteIdea(idea))
+            return (false, DeleteBlockedHint(idea));
+
+        await RemoveIdeaCoreAsync(idea);
+        _logger.LogInformation("Idea {IdeaId} deleted by owner {SubmitterId}", ideaId, submitterId);
+        return (true, null);
     }
 
     /// <summary>
@@ -179,7 +249,7 @@ public class IdeaService : IIdeaService
     /// Draft ideas (Status == 0) are always excluded regardless of the statusFilter argument (FR-010).
     /// Each DTO includes a resolved CategoryDisplayName.
     /// </summary>
-    public async Task<List<IdeaListItemDTO>> GetAllIdeasAsync(string? statusFilter, string? categoryFilter = null)
+    public async Task<List<IdeaListItemDTO>> GetAllIdeasAsync(string? statusFilter, string? categoryFilter = null, string? searchQuery = null)
     {
         var ideas = await _ideaRepo.GetAllAsync();
 
@@ -191,6 +261,15 @@ public class IdeaService : IIdeaService
 
         if (!string.IsNullOrWhiteSpace(categoryFilter) && CategoryDefinitions.All.ContainsKey(categoryFilter))
             ideas = ideas.Where(i => i.Category == categoryFilter).ToList();
+
+        if (!string.IsNullOrWhiteSpace(searchQuery))
+        {
+            var q = searchQuery.Trim();
+            ideas = ideas.Where(i =>
+                    i.Title.Contains(q, StringComparison.OrdinalIgnoreCase)
+                    || (i.Description != null && i.Description.Contains(q, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+        }
 
         var dtos = _mapper.Map<List<IdeaListItemDTO>>(ideas);
         EnrichCategoryDisplayNames(dtos);
@@ -255,6 +334,50 @@ public class IdeaService : IIdeaService
         if (idea == null || idea.Status != IdeaStatus.Draft || idea.SubmitterId != submitterId)
             return (false, "Not found or access denied.");
 
+        var applied = await ApplyEditViewModelToIdeaAsync(idea, vm);
+        if (!applied.Success) return applied;
+
+        try
+        {
+            await _ideaRepo.UpdateAsync(idea);
+            _logger.LogInformation("Draft {DraftId} updated by {SubmitterId}", draftId, submitterId);
+            return (true, null);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning("Concurrency error updating draft {DraftId}: {Message}", draftId, ex.Message);
+            return (false, ex.Message);
+        }
+    }
+
+    public async Task<(bool Success, string? Error)> UpdateSubmittedIdeaAsync(
+        Guid ideaId, Guid submitterId, EditDraftViewModel vm)
+    {
+        var idea = await _ideaRepo.GetByIdAsync(ideaId);
+        if (idea == null || idea.SubmitterId != submitterId)
+            return (false, "Not found or access denied.");
+        if (!SubmitterMayAmendSubmitted(idea))
+            return (false, "This idea can no longer be changed — review has already started.");
+
+        var applied = await ApplyEditViewModelToIdeaAsync(idea, vm);
+        if (!applied.Success) return applied;
+
+        try
+        {
+            await _ideaRepo.UpdateAsync(idea);
+            _logger.LogInformation("Submitted idea {IdeaId} updated by submitter {SubmitterId} before review", ideaId, submitterId);
+            return (true, null);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning("Concurrency error updating submitted idea {IdeaId}: {Message}", ideaId, ex.Message);
+            return (false, ex.Message);
+        }
+    }
+
+    /// <summary>Shared body for draft updates and pre-review submitted edits.</summary>
+    private async Task<(bool Success, string? Error)> ApplyEditViewModelToIdeaAsync(Idea idea, EditDraftViewModel vm)
+    {
         idea.Title = vm.Title;
         idea.Description = vm.Description;
         idea.Category = vm.Category;
@@ -278,7 +401,6 @@ public class IdeaService : IIdeaService
             if (!FileStorageHelper.IsAllowedMimeType(detectedMime))
                 return (false, "File type is not allowed (MIME validation failed).");
 
-            // Remove the old attachment if one exists and wasn't already removed
             foreach (var att in idea.IdeaAttachments.ToList())
             {
                 var absPath = Path.Combine(_env.ContentRootPath, att.FilePath);
@@ -305,8 +427,6 @@ public class IdeaService : IIdeaService
             });
         }
 
-        await _ideaRepo.UpdateAsync(idea);
-        _logger.LogInformation("Draft {DraftId} updated by {SubmitterId}", draftId, submitterId);
         return (true, null);
     }
 
@@ -324,10 +444,18 @@ public class IdeaService : IIdeaService
 
         idea.Status = IdeaStatus.Submitted;
         idea.LastModifiedDate = DateTime.UtcNow;
-        await _ideaRepo.UpdateAsync(idea);
-
-        _logger.LogInformation("Draft {DraftId} submitted by {SubmitterId}", draftId, submitterId);
-        return (true, null);
+        
+        try
+        {
+            await _ideaRepo.UpdateAsync(idea);
+            _logger.LogInformation("Draft {DraftId} submitted by {SubmitterId}", draftId, submitterId);
+            return (true, null);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning("Concurrency error submitting draft {DraftId}: {Message}", draftId, ex.Message);
+            return (false, ex.Message);
+        }
     }
 
     /// <summary>
@@ -340,16 +468,21 @@ public class IdeaService : IIdeaService
         if (idea == null || idea.Status != IdeaStatus.Draft || idea.SubmitterId != submitterId)
             return (false, "Not found or access denied.");
 
-        foreach (var att in idea.IdeaAttachments)
-        {
-            var absPath = Path.Combine(_env.ContentRootPath, att.FilePath);
-            if (File.Exists(absPath)) File.Delete(absPath);
-        }
-
-        _db.Set<Idea>().Remove(idea);
-        await _db.SaveChangesAsync();
-
+        await RemoveIdeaCoreAsync(idea);
         _logger.LogInformation("Draft {DraftId} deleted by {SubmitterId}", draftId, submitterId);
+        return (true, null);
+    }
+
+    public async Task<(bool Success, string? Error)> WithdrawSubmittedIdeaAsync(Guid ideaId, Guid submitterId)
+    {
+        var idea = await _ideaRepo.GetByIdAsync(ideaId);
+        if (idea == null || idea.SubmitterId != submitterId)
+            return (false, "Not found or access denied.");
+        if (!SubmitterMayAmendSubmitted(idea))
+            return (false, "This idea can no longer be withdrawn — review has already started.");
+
+        await RemoveIdeaCoreAsync(idea);
+        _logger.LogInformation("Submitted idea {IdeaId} withdrawn by submitter {SubmitterId}", ideaId, submitterId);
         return (true, null);
     }
 
@@ -393,30 +526,47 @@ public class IdeaService : IIdeaService
         if (!Enum.TryParse<IdeaStatus>(newStatus, out var parsedStatus))
             return (false, "Invalid status value.");
 
+        if (parsedStatus is IdeaStatus.Draft)
+            return (false, "Draft cannot be assigned from the admin panel.");
+
         var idea = await _ideaRepo.GetByIdAsync(ideaId);
         if (idea == null) return (false, "Idea not found.");
+
+        if (idea.Status is IdeaStatus.Accepted or IdeaStatus.Rejected)
+            return (false, "Decided ideas cannot be changed.");
+
+        if (idea.Status == parsedStatus)
+            return (true, null);
 
         var oldStatus = idea.Status.ToString();
         idea.Status = parsedStatus;
         idea.LastModifiedByAdminId = adminId;
         idea.LastModifiedDate = DateTime.UtcNow;
 
-        await _ideaRepo.UpdateAsync(idea);
-
-        await _auditRepo.AddAsync(new AuditLog
+        try
         {
-            Id = Guid.NewGuid(),
-            IdeaId = ideaId,
-            OldStatus = oldStatus,
-            NewStatus = newStatus,
-            ChangedByAdminId = adminId,
-            ChangedDate = DateTime.UtcNow
-        });
+            await _ideaRepo.UpdateAsync(idea);
 
-        _logger.LogInformation("Idea {IdeaId} status changed from {Old} to {New} by admin {AdminId}",
-            ideaId, oldStatus, newStatus, adminId);
+            await _auditRepo.AddAsync(new AuditLog
+            {
+                Id = Guid.NewGuid(),
+                IdeaId = ideaId,
+                OldStatus = oldStatus,
+                NewStatus = newStatus,
+                ChangedByAdminId = adminId,
+                ChangedDate = DateTime.UtcNow
+            });
 
-        return (true, null);
+            _logger.LogInformation("Idea {IdeaId} status changed from {Old} to {New} by admin {AdminId}",
+                ideaId, oldStatus, newStatus, adminId);
+
+            return (true, null);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning("Concurrency error updating status for idea {IdeaId}: {Message}", ideaId, ex.Message);
+            return (false, ex.Message);
+        }
     }
 
     public async Task<(string FileName, byte[] Data, string ContentType)?> DownloadAttachmentAsync(

@@ -1,173 +1,265 @@
 @model AdminIdeaListViewModel
 @{
-    ViewData["Title"] = "Admin — All Ideas";
-    var hasFilters = !string.IsNullOrEmpty(Model.StatusFilter) || !string.IsNullOrEmpty(Model.CategoryFilter);
+    ViewData["Title"] = "All submissions";
+    var hasCategoryFilter = !string.IsNullOrEmpty(Model.CategoryFilter);
+    var hasSearch = !string.IsNullOrWhiteSpace(Model.SearchQuery);
+    var hasFilters = hasCategoryFilter || !string.IsNullOrEmpty(Model.StatusFilter) || hasSearch;
+    var totalCount = Model.Ideas.Count();
+
+    string StatusBadgeClass(string status) => status switch
+    {
+        "Draft" => "badge-draft",
+        "Submitted" => "badge-submitted",
+        "UnderReview" => "badge-review",
+        "Accepted" => "badge-accepted",
+        "Rejected" => "badge-rejected",
+        _ => "badge-draft"
+    };
+    string StatusLabel(string s) => s?.Replace("UnderReview", "Under Review") ?? "";
+
+    // Color config per status for stat cards
+    var statConfig = new Dictionary<string, (string border, string ring, string iconBg, string iconFg, string icon)>
+    {
+        ["Submitted"]  = ("border-blue-400",   "ring-blue-300",   "bg-blue-100",   "text-blue-600",   "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"),
+        ["UnderReview"]= ("border-amber-400",  "ring-amber-300",  "bg-amber-100",  "text-amber-600",  "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"),
+        ["Accepted"]   = ("border-emerald-400","ring-emerald-300","bg-emerald-100","text-emerald-600","M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"),
+        ["Rejected"]   = ("border-red-400",    "ring-red-300",    "bg-red-100",    "text-red-600",    "M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"),
+    };
 }
 
+<!-- Blind Review Banner -->
 @if (Model.IsBlindReviewActive)
 {
-    <div class="alert alert-info d-flex align-items-center mb-4" role="alert">
-        <i class="bi bi-eye-slash-fill me-2 fs-5"></i>
+    <div class="alert-info mt-4 mb-5">
+        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+        </svg>
         <div>
-            <strong>Blind review is active</strong> — submitter identities are hidden for ideas under evaluation.
-            <a asp-controller="Settings" asp-action="BlindReview" class="alert-link ms-2">Manage Settings</a>
+            <span class="font-semibold">Blind review is active</span> — submitter identities are hidden for ideas under evaluation.
+            <a href="@Url.Action("BlindReview", "Settings")" class="underline ml-2 hover:opacity-70">Manage Settings</a>
         </div>
     </div>
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="mb-0"><i class="bi bi-shield-check me-2"></i>Innovation Ideas Review</h2>
-    <div class="dropdown">
-        <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-            <i class="bi bi-diagram-3 me-1"></i>Browse by Stage
-        </button>
-        <ul class="dropdown-menu dropdown-menu-end">
-            <li><a class="dropdown-item" asp-action="ByStage" asp-route-stage="1">Initial Screening</a></li>
-            <li><a class="dropdown-item" asp-action="ByStage" asp-route-stage="2">Technical Review</a></li>
-            <li><a class="dropdown-item" asp-action="ByStage" asp-route-stage="3">Business Impact Assessment</a></li>
-            <li><a class="dropdown-item" asp-action="ByStage" asp-route-stage="4">Final Decision</a></li>
-        </ul>
-    </div>
-</div>
-
-@if (Model.StatusSummary.Any())
-{
-    <div class="row g-3 mb-4">
-        @foreach (var entry in Model.StatusSummary)
-        {
-            var cardColor = entry.Key switch
-            {
-                "Submitted" => "border-secondary",
-                "UnderReview" => "border-warning",
-                "Accepted" => "border-success",
-                "Rejected" => "border-danger",
-                _ => "border-secondary"
-            };
-            <div class="col-6 col-md-3">
-                <div class="card text-center border-2 @cardColor">
-                    <div class="card-body py-2">
-                        <h4 class="mb-0">@entry.Value</h4>
-                        <small class="text-muted">@entry.Key.Replace("UnderReview", "Under Review")</small>
-                    </div>
-                </div>
+<!-- Page Header + Stat Cards -->
+<div class="mt-4">
+    <div class="page-header">
+        <div>
+                <div class="flex items-center gap-2 mb-0.5">
+                <span class="text-xs font-semibold text-gray-500 uppercase tracking-widest">Innovation intake</span>
             </div>
-        }
-    </div>
-}
-
-<form method="get" class="d-flex flex-wrap gap-2 mb-4 align-items-end">
-    <div>
-        <label class="form-label small text-muted mb-1">Status</label>
-        <select name="statusFilter" class="form-select w-auto">
-            <option value="">All Statuses</option>
-            @foreach (var status in Model.AvailableStatuses)
-            {
-                <option value="@status" selected="@(Model.StatusFilter == status)">
-                    @status.Replace("UnderReview", "Under Review")
-                </option>
-            }
-        </select>
-    </div>
-    <div>
-        <label class="form-label small text-muted mb-1">Category</label>
-        <select name="categoryFilter" class="form-select w-auto">
-            <option value="">All Categories</option>
-            @foreach (var cat in Model.AvailableCategories)
-            {
-                <option value="@cat.Key" selected="@(Model.CategoryFilter == cat.Key)">@cat.Value</option>
-            }
-        </select>
-    </div>
-    <div class="d-flex gap-2 align-self-end">
-        <button type="submit" class="btn btn-outline-secondary">
-            <i class="bi bi-funnel me-1"></i>Filter
-        </button>
+            <h1 class="page-title">
+                All submissions
+                @if (hasFilters)
+                {
+                    <span class="page-count-badge">@totalCount</span>
+                }
+                else
+                {
+                    <span class="page-count-badge">@(Model.StatusSummary.Values.Sum()) total</span>
+                }
+            </h1>
+            <p class="page-subtitle">Every idea shared by submitters — open a row for review or use filters</p>
+        </div>
         @if (hasFilters)
         {
-            <a asp-action="Index" class="btn btn-outline-danger"><i class="bi bi-x"></i>Clear</a>
+            <a asp-action="Index" class="btn-ghost btn-sm flex items-center gap-1.5 text-gray-500 self-start mt-1">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                Clear filters
+            </a>
         }
     </div>
-</form>
 
-@if (!Model.Ideas.Any())
-{
-    <div class="text-center py-5 text-muted">
-        <i class="bi bi-inbox display-4"></i>
-        <p class="mt-3">No ideas found.</p>
-    </div>
-}
-else
-{
-    <div class="table-responsive">
-        <table class="table table-hover align-middle">
-            <thead class="table-light">
-                <tr>
-                    <th>Title</th>
-                    <th>Category</th>
-                    <th>Submitted By</th>
-                    <th>Status</th>
-                    <th>Review Stage</th>
-                    <th class="d-none d-md-table-cell">Score</th>
-                    <th>Date</th>
-                    <th class="text-end">Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var idea in Model.Ideas)
+    <!-- Stat Cards (primary filters) -->
+    @if (Model.StatusSummary.Any())
+    {
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            @foreach (var (key, label) in new[] { ("Submitted","Submitted"), ("UnderReview","Under Review"), ("Accepted","Accepted"), ("Rejected","Rejected") })
+            {
+                var count = Model.StatusSummary.TryGetValue(key, out var c) ? c : 0;
+                var cfg = statConfig[key];
+                var isActive = Model.StatusFilter == key;
+                <a href="@(isActive ? Url.Action("Index", "Admin", new { categoryFilter = Model.CategoryFilter, q = Model.SearchQuery }) : Url.Action("Index", "Admin", new { statusFilter = key, categoryFilter = Model.CategoryFilter, q = Model.SearchQuery }))"
+                   class="stat-card stat-card-link @cfg.border @(isActive ? "is-active " + cfg.ring : "border-t-4")">
+                    <div class="stat-icon @cfg.iconBg">
+                        <svg class="w-5 h-5 @cfg.iconFg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="@cfg.icon" />
+                        </svg>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="text-2xl font-bold text-gray-900 leading-none tabular-nums">@count</p>
+                        <p class="text-xs text-gray-500 font-medium mt-1 truncate">@label</p>
+                        @if (isActive)
+                        {
+                            <p class="text-[10px] text-blue-600 font-semibold mt-0.5 uppercase tracking-wide">Active filter</p>
+                        }
+                    </div>
+                </a>
+            }
+        </div>
+    }
+
+    <!-- Category only — status is chosen via the stat cards above (no duplicate dropdown) -->
+    <div class="card mb-5 p-4 flex flex-wrap items-center gap-3">
+        <form method="get" class="flex flex-wrap items-center gap-3 flex-1 min-w-0">
+            <input type="hidden" name="statusFilter" value="@Model.StatusFilter" />
+            <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider shrink-0">Search</span>
+            <input type="search"
+                   name="q"
+                   value="@Model.SearchQuery"
+                   placeholder="Title or description…"
+                   class="form-input text-sm py-1.5 h-9 flex-1 min-w-[12rem] max-w-md" />
+            <button type="submit" class="btn-secondary btn-sm py-1.5 h-9">Search</button>
+            <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider shrink-0">Category</span>
+            <select name="categoryFilter"
+                    class="form-select text-sm py-1.5 h-9 max-w-xs"
+                    onchange="this.form.submit()">
+                <option value="">All categories</option>
+                @foreach (var cat in Model.AvailableCategories)
                 {
-                    var badgeClass = idea.Status switch
-                    {
-                        "Draft" => "bg-secondary bg-opacity-50",
-                        "Submitted" => "bg-secondary",
-                        "UnderReview" => "bg-warning text-dark",
-                        "Accepted" => "bg-success",
-                        "Rejected" => "bg-danger",
-                        _ => "bg-secondary"
-                    };
-                    <tr>
-                        <td class="fw-semibold">@idea.Title</td>
-                        <td>
-                            @if (idea.CategoryDisplayName != null)
-                            {
-                                <span class="badge bg-secondary bg-opacity-75">@idea.CategoryDisplayName</span>
-                            }
-                            else
-                            {
-                                <span class="text-muted small">—</span>
-                            }
-                        </td>
-                        <td>@idea.SubmitterName</td>
-                        <td><span class="badge @badgeClass">@idea.Status.Replace("UnderReview", "Under Review")</span></td>
-                        <td>
-                            @if (idea.CurrentReviewStageOrder > 0)
-                            {
-                                <span class="badge bg-primary bg-opacity-75 small">@idea.CurrentReviewStageName</span>
-                            }
-                            else
-                            {
-                                <span class="text-muted small">—</span>
-                            }
-                        </td>
-                        <td class="d-none d-md-table-cell">
-                            @if (idea.AggregateScore.HasValue)
-                            {
-                                <span class="badge bg-warning text-dark">@idea.AggregateScore.Value.ToString("F2") ★</span>
-                                <small class="text-muted ms-1">(@idea.ScorerCount)</small>
-                            }
-                            else
-                            {
-                                <span class="text-muted">—</span>
-                            }
-                        </td>
-                        <td>@idea.CreatedDate.ToString("MMM dd, yyyy")</td>
-                        <td class="text-end">
-                            <a asp-action="Detail" asp-route-id="@idea.Id" class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-eye me-1"></i>Review
-                            </a>
-                        </td>
-                    </tr>
+                    <option value="@cat.Key" selected="@(Model.CategoryFilter == cat.Key)">@cat.Value</option>
                 }
-            </tbody>
-        </table>
+            </select>
+        </form>
     </div>
-}
+
+    @if (hasCategoryFilter)
+    {
+        var catLabel = Model.AvailableCategories.TryGetValue(Model.CategoryFilter!, out var cl) ? cl : Model.CategoryFilter;
+        <p class="text-xs text-slate-500 mb-4 px-0.5">
+            Category filter: <span class="font-semibold text-slate-700">@catLabel</span>
+        </p>
+    }
+
+    <!-- Ideas Table -->
+    @if (!Model.Ideas.Any())
+    {
+        <div class="card">
+            <div class="empty-state">
+                <div class="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-2xl flex items-center justify-center">
+                    <svg class="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                </div>
+                <h3 class="text-base font-semibold text-gray-700 mb-1">No ideas found</h3>
+                <p class="text-sm text-gray-400">
+                    @if (hasFilters)
+                    {
+                        <span>No ideas match the active filters. <a asp-action="Index" class="text-blue-600 hover:underline">Clear filters</a> to see all ideas.</span>
+                    }
+                    else
+                    {
+                        <span>No innovation ideas have been submitted yet.</span>
+                    }
+                </p>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Category</th>
+                            <th>Submitter</th>
+                            <th>Status</th>
+                            <th>Attach.</th>
+                            <th>Score</th>
+                            <th>Submitted</th>
+                            <th class="text-right"><span class="sr-only">Open</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var idea in Model.Ideas)
+                        {
+                            var detailUrl = Url.Action("Detail", "Admin", new { id = idea.Id });
+                            <tr class="row-link" onclick="window.location='@detailUrl'">
+                                <td>
+                                    <a href="@detailUrl"
+                                       class="font-semibold text-gray-900 hover:text-blue-600 transition-colors"
+                                       onclick="event.stopPropagation()">
+                                        @idea.Title
+                                    </a>
+                                </td>
+                                <td>
+                                    @if (idea.CategoryDisplayName != null)
+                                    {
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
+                                            @idea.CategoryDisplayName
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-gray-300 text-xs">—</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-6 h-6 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">
+                                            @(idea.SubmitterName?.Substring(0, 1).ToUpper() ?? "?")
+                                        </div>
+                                        <span class="text-gray-700 text-sm">@idea.SubmitterName</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="@StatusBadgeClass(idea.Status)">@StatusLabel(idea.Status)</span>
+                                </td>
+                                <td class="text-center">
+                                    @if (idea.AttachmentCount > 0)
+                                    {
+                                        <div class="flex justify-center">
+                                            <partial name="_AttachmentBadge" model="(idea.AttachmentCount, true)" />
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-gray-300 text-xs">—</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (idea.AggregateScore.HasValue)
+                                    {
+                                        var pct = (int)(idea.AggregateScore.Value / 5m * 100);
+                                        var barColor = idea.AggregateScore.Value >= 4m ? "bg-emerald-400" :
+                                                       idea.AggregateScore.Value >= 2.5m ? "bg-amber-400" : "bg-red-400";
+                                        <div>
+                                            <div class="flex items-center gap-1">
+                                                <svg class="w-3.5 h-3.5 text-amber-400 fill-current flex-shrink-0" viewBox="0 0 20 20">
+                                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                                </svg>
+                                                <span class="text-sm font-semibold text-gray-800 tabular-nums">@idea.AggregateScore.Value.ToString("F1")</span>
+                                                <span class="text-xs text-gray-400">(@idea.ScorerCount)</span>
+                                            </div>
+                                            <div class="score-bar-mini">
+                                                <div class="score-bar-mini-fill @barColor" style="width: @pct%"></div>
+                                            </div>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-gray-300 text-xs">Not scored</span>
+                                    }
+                                </td>
+                                <td class="text-gray-400 text-xs whitespace-nowrap">@idea.CreatedDate.ToString("MMM dd, yyyy")</td>
+                                <td class="text-right" onclick="event.stopPropagation()">
+                                    <a href="@detailUrl"
+                                       class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-gray-100 text-gray-500 hover:bg-blue-600 hover:text-white transition-all duration-150"
+                                       title="Open idea">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
+                                        </svg>
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>

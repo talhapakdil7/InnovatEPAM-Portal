@@ -1,0 +1,21 @@
+@model (int Count, bool Compact)
+@if (Model.Count > 0)
+{
+    var n = Model.Count;
+    var compact = Model.Compact;
+    var box = compact ? "h-7 w-7 rounded-lg" : "h-9 w-9 rounded-xl";
+    var icon = compact ? "h-3.5 w-3.5" : "h-4 w-4";
+    var badgeRing = compact ? "ring-[1.5px]" : "ring-2";
+    <span class="relative inline-flex @box flex-shrink-0 items-center justify-center bg-stone-100 text-stone-600 ring-1 ring-stone-200/80 shadow-sm"
+          title="@(n == 1 ? "1 attachment" : $"{n} attachments")"
+          role="img"
+          aria-label="@(n == 1 ? "1 attachment" : $"{n} attachments")">
+        <svg class="@icon" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m18.375 12.845-8.905 8.905a5.115 5.115 0 0 1-7.23-7.23l8.905-8.905a3.375 3.375 0 1 1 4.773 4.773l-8.739 8.739a2.25 2.25 0 0 1-3.182-3.182l8.467-8.467" />
+        </svg>
+        @if (n > 1)
+        {
+            <span class="absolute -right-1 -top-1 flex min-h-[1rem] min-w-[1rem] items-center justify-center rounded-full bg-stone-700 px-0.5 text-[9px] font-bold leading-none text-white @badgeRing ring-white tabular-nums sm:min-h-[1.125rem] sm:min-w-[1.125rem] sm:text-[10px]">@n</span>
+        }
+    </span>
+}

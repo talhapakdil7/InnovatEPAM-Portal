@@ -1,82 +1,309 @@
 @model IdeaListViewModel
 @{
-    ViewData["Title"] = "My Ideas";
+    var focusDrafts = (ViewData["IdeasListFocus"]?.ToString() ?? "") == "drafts";
+    ViewData["Title"] = focusDrafts ? "Drafts" : "My ideas";
+
+    int C(string k) => Model.StatusCounts.TryGetValue(k, out var n) ? n : 0;
+    var draftCount = C("Draft");
+    var pipelineTotal = Model.StatusCounts.Values.Sum() - draftCount;
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+
+    double Pp(int n) => pipelineTotal == 0 ? 0 : 100.0 * n / pipelineTotal;
+    var donutSegs = new List<(double Pct, string Hex, string Lbl, int Ct)>();
+    if (C("Submitted") > 0) donutSegs.Add((Pp(C("Submitted")), "#3b82f6", "Queued", C("Submitted")));
+    if (C("UnderReview") > 0) donutSegs.Add((Pp(C("UnderReview")), "#fbbf24", "In review", C("UnderReview")));
+    if (C("Accepted") > 0) donutSegs.Add((Pp(C("Accepted")), "#10b981", "Accepted", C("Accepted")));
+    if (C("Rejected") > 0) donutSegs.Add((Pp(C("Rejected")), "#ef4444", "Rejected", C("Rejected")));
+
+    string PipelineDonutGradient()
+    {
+        if (donutSegs.Count == 0) return "conic-gradient(#e2e8f0 0% 100%)";
+        double acc = 0;
+        var parts = new List<string>();
+        for (var i = 0; i < donutSegs.Count; i++)
+        {
+            var (pct, hex, _, _) = donutSegs[i];
+            var start = acc;
+            acc += pct;
+            if (i == donutSegs.Count - 1) acc = 100.0;
+            parts.Add($"{hex} {start.ToString("F4", inv)}% {acc.ToString("F4", inv)}%");
+        }
+        return $"conic-gradient({string.Join(", ", parts)})";
+    }
+    var pipelineDonut = PipelineDonutGradient();
+
+    string StatusBadgeClass(string status) => status switch
+    {
+        "Draft" => "badge-draft",
+        "Submitted" => "badge-submitted",
+        "UnderReview" => "badge-review",
+        "Accepted" => "badge-accepted",
+        "Rejected" => "badge-rejected",
+        _ => "badge-draft"
+    };
+    string StatusLabel(string status) =>
+        (status ?? "").Replace("UnderReview", "In review", StringComparison.Ordinal)
+                       .Replace("Accepted", "Accepted", StringComparison.Ordinal)
+                       .Replace("Rejected", "Rejected", StringComparison.Ordinal);
+
+    string DeleteConfirm(IdeaListItemDTO i)
+    {
+        if (i.Status == "Draft") return "Delete this draft permanently?";
+        return "Remove this idea from your workspace? This cannot be undone.";
+    }
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2><i class="bi bi-collection me-2"></i>My Ideas</h2>
-    <a asp-action="Create" class="btn btn-primary">
-        <i class="bi bi-plus-lg me-1"></i>Submit New Idea
-    </a>
-</div>
-
-<form method="get" class="d-flex gap-2 mb-4">
-    <select name="statusFilter" class="form-select w-auto">
-        <option value="">All Statuses</option>
-        @foreach (var status in Model.AvailableStatuses)
-        {
-            <option value="@status" selected="@(Model.StatusFilter == status)">@status</option>
-        }
-    </select>
-    <button type="submit" class="btn btn-outline-secondary">
-        <i class="bi bi-funnel me-1"></i>Filter
-    </button>
-    @if (!string.IsNullOrEmpty(Model.StatusFilter))
-    {
-        <a asp-action="Index" class="btn btn-outline-danger">
-            <i class="bi bi-x"></i>Clear
-        </a>
-    }
-</form>
-
-@if (!Model.Ideas.Any())
+@if (focusDrafts)
 {
-    <div class="text-center py-5 text-muted">
-        <i class="bi bi-inbox display-4"></i>
-        <p class="mt-3">No ideas found. <a asp-action="Create">Submit your first idea!</a></p>
+    <div class="mt-2 space-y-6 pb-10">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-slate-200/90 bg-white px-5 py-4 shadow-sm">
+            <div class="min-w-0 space-y-1">
+                <a asp-action="Index" class="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+                    Back to My ideas
+                </a>
+                <h1 class="text-xl font-bold text-slate-900 tracking-tight">Drafts</h1>
+                <p class="text-sm text-slate-500">Not-yet-submitted ideas appear here; after you submit, they move to <strong>My ideas</strong>.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
+                <a asp-action="Create" class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                    New idea
+                </a>
+            </div>
+        </div>
+
+        <div class="rounded-2xl border border-slate-200/90 bg-slate-50/40 overflow-hidden">
+            <div class="px-5 py-5 sm:px-7 border-b border-slate-200/80 bg-white/80">
+                <div class="flex flex-wrap items-end justify-between gap-3">
+                    <div>
+                        <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Draft box</p>
+                        <h2 class="text-lg font-semibold text-slate-900 mt-1">
+                            @(draftCount > 0 ? "Your saved drafts" : "No drafts yet")
+                        </h2>
+                        <p class="text-sm text-slate-600 mt-1">Edit, delete, or save until you are ready to submit.</p>
+                    </div>
+                    @if (draftCount > 0)
+                    {
+                        <span class="text-sm font-medium text-slate-600 tabular-nums">@draftCount draft(s)</span>
+                    }
+                </div>
+            </div>
+            <div class="px-5 py-6 sm:px-7 sm:py-8">
+                @if (Model.DraftIdeas.Any())
+                {
+                    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                        @foreach (var idea in Model.DraftIdeas)
+                        {
+                            <div class="flex flex-col rounded-2xl border-2 border-dashed border-slate-200 bg-white min-h-[200px] overflow-hidden">
+                                <div class="h-1 w-full bg-gradient-to-r from-slate-300 to-slate-400"></div>
+                                <div class="p-5 flex-1 flex flex-col">
+                                    <div class="flex items-start justify-between gap-2 mb-2">
+                                        <h3 class="text-base font-semibold text-slate-900 leading-snug line-clamp-2">@idea.Title</h3>
+                                        <span class="@StatusBadgeClass(idea.Status) flex-shrink-0 text-[10px]">Draft</span>
+                                    </div>
+                                    @if (idea.CategoryDisplayName != null)
+                                    {
+                                        <span class="inline-flex w-fit items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-800 border border-indigo-100">@idea.CategoryDisplayName</span>
+                                    }
+                                </div>
+                                <div class="px-5 py-3 border-t border-slate-100 flex flex-wrap justify-between items-center gap-2 bg-slate-50/60">
+                                    <div class="flex items-center gap-2 text-xs text-slate-500">
+                                        <span>@idea.LastModifiedDate.ToString("dd MMM yyyy")</span>
+                                        @if (idea.AttachmentCount > 0)
+                                        {
+                                            <partial name="_AttachmentBadge" model="(idea.AttachmentCount, false)" />
+                                        }
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <form asp-action="DeleteMine" method="post" class="inline" onsubmit="return confirm('@DeleteConfirm(idea)');">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@idea.Id" />
+                                            <button type="submit" class="btn-ghost btn-sm text-red-600">Delete</button>
+                                        </form>
+                                        <a asp-action="Edit" asp-route-id="@idea.Id" class="text-xs font-semibold text-blue-600 hover:text-blue-800">Edit →</a>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="rounded-2xl border border-dashed border-slate-200 bg-white px-6 py-10 text-center">
+                        <p class="text-slate-700 font-medium">Your draft list is empty</p>
+                        <p class="text-sm text-slate-500 mt-1 mb-4">Saved-but-not-submitted ideas show up here.</p>
+                        <a asp-action="Create" class="btn-primary">Create idea</a>
+                    </div>
+                }
+            </div>
+        </div>
     </div>
 }
 else
 {
-    <div class="row g-3">
-        @foreach (var idea in Model.Ideas)
-        {
-            var badgeClass = idea.Status switch
-            {
-                "Draft" => "bg-secondary bg-opacity-50",
-                "Submitted" => "bg-secondary",
-                "UnderReview" => "bg-warning text-dark",
-                "Accepted" => "bg-success",
-                "Rejected" => "bg-danger",
-                _ => "bg-secondary"
-            };
-
-            <div class="col-12 col-md-6 col-lg-4">
-                <div class="card h-100 shadow-sm">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <h5 class="card-title mb-0 text-truncate" title="@idea.Title">@idea.Title</h5>
-                            <span class="badge @badgeClass ms-2 flex-shrink-0">@idea.Status.Replace("UnderReview", "Under Review")</span>
-                        </div>
-                        @if (idea.CategoryDisplayName != null)
-                        {
-                            <div class="mb-1">
-                                <span class="badge bg-secondary bg-opacity-75 small">
-                                    <i class="bi bi-tag me-1"></i>@idea.CategoryDisplayName
-                                </span>
-                            </div>
-                        }
-                        <p class="card-text text-muted small">
-                            <i class="bi bi-calendar3 me-1"></i>@idea.CreatedDate.ToString("MMM dd, yyyy")
-                        </p>
-                    </div>
-                    <div class="card-footer bg-transparent">
-                        <a asp-action="Detail" asp-route-id="@idea.Id" class="btn btn-sm btn-outline-primary">
-                            <i class="bi bi-eye me-1"></i>View Details
-                        </a>
-                    </div>
-                </div>
-            </div>
-        }
+<div class="mt-2 space-y-6 pb-10">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-slate-200/90 bg-white px-5 py-4 shadow-sm">
+        <div class="min-w-0">
+            <h1 class="text-xl font-bold text-slate-900 tracking-tight">My ideas</h1>
+            <p class="text-sm text-slate-500 mt-0.5">Track submitted ideas here; use <strong>Drafts</strong> in the sidebar for work in progress.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2 shrink-0">
+            <a asp-action="Create" class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                New idea
+            </a>
+            <a asp-action="Index" asp-route-focus="drafts" class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-100">
+                Drafts
+                <span class="tabular-nums rounded-md bg-white px-1.5 py-0.5 text-xs text-slate-600 border border-slate-200">@draftCount</span>
+            </a>
+        </div>
     </div>
+
+    <section class="rounded-2xl border border-slate-200/90 bg-white shadow-sm overflow-hidden" aria-labelledby="summary-heading">
+        <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/80">
+            <h2 id="summary-heading" class="text-sm font-semibold text-slate-900">Submitted ideas — summary</h2>
+            <p class="text-xs text-slate-500 mt-0.5">The chart only includes submitted items. Drafts live under <strong>Workspace → Drafts</strong>.</p>
+        </div>
+        <div class="p-5">
+            @if (pipelineTotal > 0)
+            {
+                <div class="flex flex-col sm:flex-row items-center gap-6 lg:gap-8 lg:justify-center">
+                    <div class="relative h-36 w-36 flex-shrink-0">
+                        <div class="absolute inset-0 rounded-full shadow-inner ring-1 ring-slate-200/60" style="background: @pipelineDonut"></div>
+                        <div class="absolute inset-[18%] rounded-full bg-white border border-slate-100 flex flex-col items-center justify-center shadow-sm">
+                            <p class="text-xl font-bold text-slate-900 tabular-nums leading-none">@pipelineTotal</p>
+                            <p class="text-[9px] font-semibold text-slate-500 uppercase tracking-wider mt-1">submitted</p>
+                        </div>
+                    </div>
+                    <ul class="flex-1 w-full sm:min-w-[13rem] space-y-1.5">
+                        @foreach (var seg in donutSegs)
+                        {
+                            var pct = pipelineTotal == 0 ? "0" : seg.Pct.ToString("F0", inv);
+                            <li class="flex items-center justify-between gap-2 rounded-lg bg-slate-50/80 px-2.5 py-1.5 border border-slate-100/80">
+                                <span class="flex items-center gap-2 min-w-0">
+                                    <span class="h-2.5 w-2.5 rounded-full flex-shrink-0" style="background-color: @seg.Hex"></span>
+                                    <span class="text-xs font-medium text-slate-700 truncate">@seg.Lbl</span>
+                                </span>
+                                <span class="text-xs tabular-nums text-slate-500 shrink-0"><span class="font-semibold text-slate-800">@seg.Ct</span> (@pct%)</span>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            }
+            else
+            {
+                <div class="rounded-xl border border-slate-100 bg-slate-50/40 px-4 py-6 text-center text-sm text-slate-500 max-w-xl mx-auto">
+                    No submitted ideas yet. Edit and submit from the <a asp-action="Index" asp-route-focus="drafts" class="font-semibold text-blue-600 hover:text-blue-700">Drafts</a> page to populate this chart.
+                </div>
+            }
+        </div>
+    </section>
+
+    <div id="pipeline-list" class="rounded-2xl border border-slate-200/90 bg-white shadow-sm overflow-hidden">
+        <div class="px-5 py-5 sm:px-7 border-b border-slate-100">
+            <div class="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                    <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Submitted ideas</p>
+                    <h3 class="text-lg font-semibold text-slate-900 mt-1">Your portfolio</h3>
+                </div>
+                @if (pipelineTotal > 0)
+                {
+                    <span class="text-sm text-slate-500"><span class="font-semibold text-slate-800 tabular-nums">@pipelineTotal</span> items</span>
+                }
+            </div>
+        </div>
+        <div class="px-5 py-6 sm:px-7 sm:py-8">
+            @if (!Model.Ideas.Any())
+            {
+                <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 py-12 px-4 text-center">
+                    <h4 class="text-base font-semibold text-slate-800 mb-1">Nothing submitted yet</h4>
+                    <p class="text-slate-500 text-sm mb-4">Submit a draft or create a new idea.</p>
+                    <a asp-action="Create" class="btn-primary">Create idea</a>
+                </div>
+            }
+            else
+            {
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    @foreach (var idea in Model.Ideas)
+                    {
+                        <div class="flex flex-col rounded-2xl border border-slate-200/90 bg-white shadow-sm hover:shadow-md hover:border-slate-300 transition-all min-h-[220px] overflow-hidden">
+                            @if (idea.Status == "Accepted")
+                            { <div class="h-1 w-full bg-gradient-to-r from-emerald-400 to-emerald-600"></div> }
+                            else if (idea.Status == "Rejected")
+                            { <div class="h-1 w-full bg-gradient-to-r from-red-400 to-red-600"></div> }
+                            else if (idea.Status == "UnderReview")
+                            { <div class="h-1 w-full bg-gradient-to-r from-amber-400 to-amber-600"></div> }
+                            else
+                            { <div class="h-1 w-full bg-gradient-to-r from-blue-400 to-indigo-500"></div> }
+
+                            <div class="p-5 flex-1 flex flex-col">
+                                <div class="flex items-start justify-between gap-2 mb-2">
+                                    <h4 class="text-base font-semibold text-slate-900 leading-snug line-clamp-2">@idea.Title</h4>
+                                    <span class="@StatusBadgeClass(idea.Status) flex-shrink-0 text-[10px]">@StatusLabel(idea.Status)</span>
+                                </div>
+                                @if (idea.CategoryDisplayName != null)
+                                {
+                                    <span class="inline-flex w-fit items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-800 border border-indigo-100 mb-2">@idea.CategoryDisplayName</span>
+                                }
+                                @if (idea.Status is "UnderReview" or "Submitted")
+                                {
+                                    <p class="text-xs text-slate-500 mt-auto pt-3 leading-relaxed">
+                                        @(idea.Status == "Submitted"
+                                            ? "Queued: will move to review after team triage."
+                                            : "In review: reviewers can enter scores.")
+                                    </p>
+                                }
+                                @if (idea.AggregateScore.HasValue)
+                                {
+                                    <div class="flex items-center gap-2 mt-3 text-sm">
+                                        <svg class="w-4 h-4 text-amber-400 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                                        <span class="font-semibold text-amber-900">@idea.AggregateScore.Value.ToString("F1")</span>
+                                        <span class="text-slate-400 text-xs">/ 5 · @idea.ScorerCount reviewer(s)</span>
+                                    </div>
+                                }
+                                else if (idea.Status is "UnderReview" or "Submitted")
+                                {
+                                    <p class="text-xs text-slate-400 mt-3">No aggregate score yet.</p>
+                                }
+                            </div>
+                            <div class="px-5 py-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 bg-slate-50/40">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span class="text-xs text-slate-500">Submitted @idea.CreatedDate.ToString("dd.MM.yyyy")</span>
+                                    @if (idea.AttachmentCount > 0)
+                                    {
+                                        <partial name="_AttachmentBadge" model="(idea.AttachmentCount, false)" />
+                                    }
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    @if (idea.Status == "Submitted" && idea.CanDeleteAsOwner)
+                                    {
+                                        <form asp-action="WithdrawSubmitted" method="post" class="inline" onsubmit="return confirm('Withdraw this submission? It will be removed from the queue.');">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@idea.Id" />
+                                            <button type="submit" class="btn-ghost btn-sm text-amber-800">Withdraw</button>
+                                        </form>
+                                    }
+                                    else if (idea.CanDeleteAsOwner && idea.Status != "Submitted")
+                                    {
+                                        <form asp-action="DeleteMine" method="post" class="inline" onsubmit="return confirm('@DeleteConfirm(idea)');">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@idea.Id" />
+                                            <button type="submit" class="btn-ghost btn-sm text-red-600">Remove</button>
+                                        </form>
+                                    }
+                                    else if (!idea.CanDeleteAsOwner && !string.IsNullOrEmpty(idea.DeleteBlockedHint))
+                                    {
+                                        <span class="text-[10px] text-slate-400 border-b border-dotted border-slate-300 cursor-help" title="@idea.DeleteBlockedHint">Why can't I delete?</span>
+                                    }
+                                    <a asp-action="Detail" asp-route-id="@idea.Id" class="text-xs font-semibold text-blue-600 hover:text-blue-800">Detail →</a>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
 }

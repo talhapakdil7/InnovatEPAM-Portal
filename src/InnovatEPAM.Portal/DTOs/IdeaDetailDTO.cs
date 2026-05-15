@@ -25,28 +25,23 @@ public class IdeaDetailDTO
     /// </summary>
     public Dictionary<string, string>? CategoryDataFields { get; set; }
 
-    // ── Multi-stage review fields ──
-
-    /// <summary>Human-readable name of the current review stage, or "Pending Review" when none assigned.</summary>
-    public string CurrentReviewStageName { get; set; } = "Pending Review";
-
-    /// <summary>Integer order of the current review stage (1–4), or 0 when no stage is assigned.</summary>
-    public int CurrentReviewStageOrder { get; set; }
-
-    /// <summary>Total number of stages in the pipeline (constant = 4).</summary>
-    public int TotalReviewStages { get; set; } = 4;
-
-    /// <summary>True when the idea is at the last review stage (Final Decision).</summary>
-    public bool IsAtFinalStage { get; set; }
-
-    /// <summary>Ordered list of all stage transitions recorded for this idea, oldest first.</summary>
-    public List<StageTransitionDTO> StageHistory { get; set; } = new();
+    /// <summary>Status audit history for this idea.</summary>
+    public List<AuditLogDTO> StageHistory { get; set; } = new();
 
     /// <summary>Full score summary including per-dimension averages and admin breakdown. Null when no admin has scored yet.</summary>
     public ScoreSummaryDTO? ScoreSummary { get; set; }
 
     /// <summary>The requesting admin's own current score record. Null for submitter views or when admin has not yet scored.</summary>
     public AdminScoreRowDTO? MyScore { get; set; }
+
+    /// <summary>True when the submitter may edit this submission before it enters pipeline stages.</summary>
+    public bool CanAmendSubmitted { get; set; }
+
+    /// <summary>True when the owning submitter may delete or withdraw.</summary>
+    public bool CanDeleteAsOwner { get; set; }
+
+    /// <summary>Short reason when <see cref="CanDeleteAsOwner"/> is false.</summary>
+    public string? DeleteBlockedHint { get; set; }
 }
 
 public class IdeaAttachmentDTO

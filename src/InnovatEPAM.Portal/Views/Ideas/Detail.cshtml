@@ -1,191 +1,323 @@
 @model IdeaDetailViewModel
+@functions {
+    private static bool CanInlinePreview(string? fileName)
+    {
+        if (string.IsNullOrEmpty(fileName)) return false;
+        var ext = System.IO.Path.GetExtension(fileName).ToLowerInvariant();
+        return ext is ".pdf" or ".png" or ".jpg" or ".jpeg" or ".gif" or ".webp";
+    }
+
+    private static string AttachmentIconClass(string? fileName)
+    {
+        if (string.IsNullOrEmpty(fileName)) return "text-slate-500";
+        return System.IO.Path.GetExtension(fileName).ToLowerInvariant() switch
+        {
+            ".pdf" => "text-red-600",
+            ".doc" or ".docx" => "text-blue-600",
+            ".xls" or ".xlsx" => "text-emerald-600",
+            ".png" or ".jpg" or ".jpeg" or ".gif" or ".webp" => "text-violet-600",
+            _ => "text-slate-500"
+        };
+    }
+}
 @{
     ViewData["Title"] = Model.Idea.Title;
-    var badgeClass = Model.Idea.Status switch
+    ViewData["BreadcrumbParent"] = "My ideas";
+    ViewData["BreadcrumbParentUrl"] = Url.Action("Index", "Ideas");
+
+    string StatusBadgeClass(string status) => status switch
     {
-        "Draft" => "bg-secondary bg-opacity-50",
-        "Submitted" => "bg-secondary",
-        "UnderReview" => "bg-warning text-dark",
-        "Accepted" => "bg-success",
-        "Rejected" => "bg-danger",
-        _ => "bg-secondary"
+        "Draft" => "badge-draft",
+        "Submitted" => "badge-submitted",
+        "UnderReview" => "badge-review",
+        "Accepted" => "badge-accepted",
+        "Rejected" => "badge-rejected",
+        _ => "badge-draft"
     };
+    string StatusLabel(string s) =>
+        (s ?? "").Replace("UnderReview", "In review", StringComparison.Ordinal)
+                 .Replace("Accepted", "Accepted", StringComparison.Ordinal)
+                 .Replace("Rejected", "Rejected", StringComparison.Ordinal)
+                 .Replace("Submitted", "Submitted", StringComparison.Ordinal);
 }
 
-<div class="d-flex align-items-center mb-3">
-    <a asp-action="Index" class="btn btn-sm btn-outline-secondary me-3">
-        <i class="bi bi-arrow-left"></i>
-    </a>
-    <h2 class="mb-0 text-truncate">@Model.Idea.Title</h2>
-    <span class="badge @badgeClass ms-3">@Model.Idea.Status.Replace("UnderReview", "Under Review")</span>
-</div>
+<div class="mt-4 max-w-6xl">
 
-@if (Model.IsDraft)
-{
-    <div class="d-flex gap-2 mb-3">
-        <a asp-action="Edit" asp-route-id="@Model.Idea.Id" class="btn btn-outline-primary">
-            <i class="bi bi-pencil me-1"></i>Edit Draft
-        </a>
-        <form asp-action="DeleteDraft" method="post" onsubmit="return confirm('Are you sure you want to permanently delete this draft?');">
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="id" value="@Model.Idea.Id" />
-            <button type="submit" class="btn btn-outline-danger">
-                <i class="bi bi-trash me-1"></i>Delete Draft
-            </button>
-        </form>
+    <!-- Page header -->
+    <div class="flex flex-wrap items-start gap-4 mb-6">
+        <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-3 mb-1">
+                <a asp-action="Index" class="btn-ghost btn-icon btn-sm text-gray-500">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </a>
+                <span class="@StatusBadgeClass(Model.Idea.Status)">@StatusLabel(Model.Idea.Status)</span>
+            </div>
+            <h1 class="text-xl font-bold text-gray-900 leading-tight">@Model.Idea.Title</h1>
+        </div>
+        @if (Model.IsDraft)
+        {
+            <div class="flex gap-2 flex-shrink-0">
+                <a asp-action="Edit" asp-route-id="@Model.Idea.Id" class="btn-secondary">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Edit draft
+                </a>
+                <form asp-action="DeleteMine" method="post"
+                      onsubmit="return confirm('Permanently delete this draft?');">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@Model.Idea.Id" />
+                    <button type="submit" class="btn-danger">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Delete
+                    </button>
+                </form>
+            </div>
+        }
+        else if (Model.Idea.CanAmendSubmitted)
+        {
+            <div class="flex flex-wrap gap-2 flex-shrink-0">
+                <a asp-action="Edit" asp-route-id="@Model.Idea.Id" class="btn-secondary">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Edit submission
+                </a>
+                <form asp-action="WithdrawSubmitted" method="post"
+                      onsubmit="return confirm('Withdraw this idea permanently? It cannot be undone.');">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@Model.Idea.Id" />
+                    <button type="submit" class="btn-ghost border border-red-200 text-red-700 hover:bg-red-50">
+                        Withdraw
+                    </button>
+                </form>
+            </div>
+        }
+        else if (Model.Idea.CanDeleteAsOwner)
+        {
+            <form asp-action="DeleteMine" method="post" class="flex-shrink-0"
+                  onsubmit="return confirm('Permanently remove this idea from your workspace? This cannot be undone.');">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@Model.Idea.Id" />
+                <button type="submit" class="btn-danger">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Remove from workspace
+                </button>
+            </form>
+        }
     </div>
-}
+    @if (Model.Idea.CanAmendSubmitted && !Model.IsDraft)
+    {
+        <p class="text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 mb-6">
+            Until the first score or review starts, you can update your submission or withdraw it.
+        </p>
+    }
 
-<div class="row g-4">
-    <div class="col-lg-8">
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h5 class="card-title">Description</h5>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Left / Main Column -->
+        <div class="lg:col-span-2 space-y-4">
+
+            <!-- Description Card -->
+            <div class="card p-6">
+                <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Description</h2>
                 @if (!string.IsNullOrWhiteSpace(Model.Idea.Description))
                 {
-                    <p class="card-text">@Model.Idea.Description</p>
+                    <p class="text-gray-700 leading-relaxed whitespace-pre-wrap">@Model.Idea.Description</p>
                 }
                 else
                 {
-                    <p class="text-muted fst-italic">No description provided.</p>
+                    <p class="text-gray-400 italic">No description added.</p>
                 }
             </div>
-        </div>
 
-        @if (Model.Idea.CategoryDataFields?.Any() == true)
-        {
-            <div class="card shadow-sm mt-3">
-                <div class="card-header fw-semibold">
-                    <i class="bi bi-tag me-2 text-primary"></i>@(Model.Idea.CategoryDisplayName ?? "Category") Details
-                </div>
-                <div class="card-body">
-                    <dl class="row mb-0">
+            <!-- Category Details -->
+            @if (Model.Idea.CategoryDataFields?.Any() == true)
+            {
+                <div class="card p-6">
+                    <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                        </svg>
+                        @(Model.Idea.CategoryDisplayName ?? "Category") details
+                    </h2>
+                    <dl class="divide-y divide-gray-100">
                         @foreach (var field in Model.Idea.CategoryDataFields)
                         {
-                            <dt class="col-sm-4">@field.Key</dt>
-                            <dd class="col-sm-8" style="white-space:pre-wrap">@field.Value</dd>
+                            <div class="py-3 grid grid-cols-3 gap-4">
+                                <dt class="text-sm font-medium text-gray-500">@field.Key</dt>
+                                <dd class="text-sm text-gray-900 col-span-2 whitespace-pre-wrap">@field.Value</dd>
+                            </div>
                         }
                     </dl>
                 </div>
-            </div>
-        }
+            }
 
-        @if (Model.Idea.Attachments.Any())
-        {
-            <div class="card shadow-sm mt-3">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-paperclip me-1"></i>Attachments</h5>
-                    <ul class="list-group list-group-flush">
+            <!-- Attachments (your uploads) -->
+            <section class="card p-6" id="attachments">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                    <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                        </svg>
+                        Your attachments
+                    </h2>
+                    @if (Model.Idea.Attachments.Any())
+                    {
+                        <span class="text-xs text-gray-400">@Model.Idea.Attachments.Count file(s)</span>
+                    }
+                </div>
+                @if (!Model.Idea.Attachments.Any())
+                {
+                    <p class="text-sm text-gray-400">
+                        No files attached to this idea. You can add one when creating a new idea or on an editable draft.
+                    </p>
+                }
+                else
+                {
+                    <ul class="space-y-3">
                         @foreach (var att in Model.Idea.Attachments)
                         {
-                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                <span><i class="bi bi-file-earmark me-2 text-muted"></i>@att.FileName</span>
-                                <div class="d-flex align-items-center gap-2">
-                                    <small class="text-muted">@((att.FileSize / 1024.0).ToString("F0")) KB</small>
+                            var prev = CanInlinePreview(att.FileName);
+                            <li class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-3 px-4 bg-slate-50 rounded-xl border border-slate-200">
+                                <div class="flex items-start gap-3 min-w-0">
+                                    <div class="w-10 h-10 rounded-lg bg-white border border-slate-200 flex items-center justify-center flex-shrink-0 @AttachmentIconClass(att.FileName)">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                        </svg>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p class="text-sm font-semibold text-gray-900 truncate" title="@att.FileName">@att.FileName</p>
+                                        <p class="text-xs text-gray-400">@((att.FileSize / 1024.0).ToString("N0")) KB · @att.UploadedDate.ToString("MMM dd, yyyy")</p>
+                                    </div>
+                                </div>
+                                <div class="flex flex-wrap items-center gap-2">
+                                    @if (prev)
+                                    {
+                                        <a asp-controller="Ideas" asp-action="Download" asp-route-attachmentId="@att.Id" asp-route-preview="true"
+                                           target="_blank" rel="noopener"
+                                           class="btn-primary btn-sm inline-flex items-center gap-1.5">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                            </svg>
+                                            Preview
+                                        </a>
+                                    }
                                     <a asp-controller="Ideas" asp-action="Download" asp-route-attachmentId="@att.Id"
-                                       class="btn btn-sm btn-outline-secondary">
-                                        <i class="bi bi-download"></i>
+                                       class="btn-ghost btn-sm inline-flex items-center gap-1.5 text-blue-700 hover:bg-blue-50 border border-slate-200">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                        </svg>
+                                        Download
                                     </a>
                                 </div>
                             </li>
                         }
                     </ul>
-                </div>
-            </div>
-        }
-    </div>
+                }
+            </section>
 
-    <div class="col-lg-4">
-        @if (Model.Idea.Status == "UnderReview" && Model.Idea.CurrentReviewStageOrder > 0)
-        {
-            <div class="card shadow-sm mb-3 border-primary">
-                <div class="card-header bg-primary text-white">
-                    <i class="bi bi-diagram-3 me-1"></i>Review Progress
-                </div>
-                <div class="card-body">
-                    @{
-                        var stages = new[] { "Initial Screening", "Technical Review", "Business Impact Assessment", "Final Decision" };
-                        var currentOrder = Model.Idea.CurrentReviewStageOrder;
-                    }
-                    <p class="small text-muted mb-3">Your idea is currently being evaluated.</p>
-                    <div class="d-flex flex-column gap-2">
-                        @for (int i = 1; i <= 4; i++)
-                        {
-                            var isDone = i < currentOrder;
-                            var isCurrent = i == currentOrder;
-                            var iconClass = isDone ? "bi-check-circle-fill text-success"
-                                : isCurrent ? "bi-record-circle-fill text-primary"
-                                : "bi-circle text-muted";
-                            <div class="d-flex align-items-center gap-2 @(isCurrent ? "fw-semibold" : "text-muted")">
-                                <i class="bi @iconClass fs-5"></i>
-                                <span class="small">@stages[i - 1]</span>
+            <!-- Evaluation Score (submitter view) -->
+            @if (Model.AggregateScore.HasValue)
+            {
+                <div class="card p-6 border-l-4 border-amber-400">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
+                            <svg class="w-6 h-6 text-amber-600 fill-current" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-0.5">Review score</p>
+                            <div class="flex items-baseline gap-2">
+                                <span class="text-2xl font-bold text-gray-900">@Model.AggregateScore.Value.ToString("F2")</span>
+                                <span class="text-sm text-gray-500">/ 5</span>
+                                <span class="text-xs text-gray-400 ml-2">Average of @Model.ScorerCount reviewer@(Model.ScorerCount == 1 ? "" : "s")</span>
                             </div>
-                        }
+                        </div>
                     </div>
                 </div>
-            </div>
-        }
-
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h6 class="card-subtitle text-muted mb-3">Details</h6>
-                <dl class="row mb-0">
-                    <dt class="col-5">Submitted by</dt>
-                    <dd class="col-7">@Model.Idea.SubmitterName</dd>
-                    <dt class="col-5">Category</dt>
-                    <dd class="col-7">
-                        @if (Model.Idea.CategoryDisplayName != null)
-                        {
-                            <span class="badge bg-secondary">@Model.Idea.CategoryDisplayName</span>
-                        }
-                        else
-                        {
-                            <span class="text-muted">Uncategorized</span>
-                        }
-                    </dd>
-                    <dt class="col-5">Created</dt>
-                    <dd class="col-7">@Model.Idea.CreatedDate.ToString("MMM dd, yyyy")</dd>
-                    <dt class="col-5">Last updated</dt>
-                    <dd class="col-7">@Model.Idea.LastModifiedDate.ToString("MMM dd, yyyy")</dd>
-                </dl>
-            </div>
+            }
         </div>
 
-        @if (Model.Idea.AuditHistory.Any())
-        {
-            <div class="card shadow-sm mt-3">
-                <div class="card-body">
-                    <h6 class="card-subtitle text-muted mb-3">Status History</h6>
-                    <ul class="list-unstyled mb-0">
+        <!-- Right / Sidebar Column -->
+        <div class="space-y-4">
+
+            <!-- Details Card -->
+            <div class="card p-5">
+                <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Submission details</h3>
+                <dl class="space-y-3">
+                    <div>
+                        <dt class="text-xs text-gray-400 font-medium">Submitter</dt>
+                        <dd class="text-sm font-semibold text-gray-900 mt-0.5">@Model.Idea.SubmitterName</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs text-gray-400 font-medium">Category</dt>
+                        <dd class="mt-0.5">
+                            @if (Model.Idea.CategoryDisplayName != null)
+                            {
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
+                                    @Model.Idea.CategoryDisplayName
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="text-sm text-gray-400">Uncategorized</span>
+                            }
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs text-gray-400 font-medium">Attachments</dt>
+                        <dd class="mt-0.5 text-sm">
+                            @if (Model.Idea.Attachments.Any())
+                            {
+                                <a href="#attachments" class="text-blue-600 font-medium hover:underline">@Model.Idea.Attachments.Count file(s) — below</a>
+                            }
+                            else
+                            {
+                                <span class="text-gray-400">None</span>
+                            }
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs text-gray-400 font-medium">Created</dt>
+                        <dd class="text-sm text-gray-900 mt-0.5">@Model.Idea.CreatedDate.ToString("MMM dd, yyyy")</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs text-gray-400 font-medium">Last updated</dt>
+                        <dd class="text-sm text-gray-900 mt-0.5">@Model.Idea.LastModifiedDate.ToString("MMM dd, yyyy")</dd>
+                    </div>
+                </dl>
+            </div>
+
+            <!-- Status History -->
+            @if (Model.Idea.AuditHistory.Any())
+            {
+                <div class="card p-5">
+                    <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Status history</h3>
+                    <ul class="space-y-3">
                         @foreach (var log in Model.Idea.AuditHistory)
                         {
-                            <li class="mb-2 small">
-                                <i class="bi bi-arrow-right-circle text-primary me-1"></i>
-                                <strong>@log.OldStatus</strong> → <strong>@log.NewStatus</strong>
-                                <br />
-                                <span class="text-muted">by @log.ChangedByAdmin on @log.ChangedDate.ToString("MMM dd, yyyy")</span>
+                            <li class="text-xs">
+                                <div class="flex items-center gap-1.5 font-medium text-gray-700">
+                                    <span class="text-gray-400">@StatusLabel(log.OldStatus)</span>
+                                    <svg class="w-3 h-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                    </svg>
+                                    <span class="text-gray-900">@StatusLabel(log.NewStatus)</span>
+                                </div>
+                                <div class="text-gray-400 mt-0.5">@log.ChangedByAdmin · @log.ChangedDate.ToString("MMM dd")</div>
                             </li>
                         }
                     </ul>
                 </div>
-            </div>
-        }
-    </div>
-
-    @* Evaluation Score — submitter sees overall aggregate only (FR-009) *@
-    @if (Model.AggregateScore.HasValue)
-    {
-        <div class="card shadow-sm mt-3 border-warning">
-            <div class="card-body d-flex align-items-center gap-3">
-                <i class="bi bi-star-fill text-warning fs-4"></i>
-                <div>
-                    <div class="fw-semibold">Evaluation Score</div>
-                    <div>
-                        <span class="badge bg-warning text-dark fs-6">@Model.AggregateScore.Value.ToString("F2") / 5</span>
-                        <small class="text-muted ms-2">rated by @Model.ScorerCount reviewer(s)</small>
-                    </div>
-                </div>
-            </div>
+            }
         </div>
-    }
+    </div>
 </div>

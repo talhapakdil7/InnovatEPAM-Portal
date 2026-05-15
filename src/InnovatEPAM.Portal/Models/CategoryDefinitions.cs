@@ -66,35 +66,35 @@ public static class CategoryDefinitions
             [TechnicalImprovement] = new CategoryDefinition
             {
                 Key = TechnicalImprovement,
-                DisplayName = "Technical Improvement",
+                DisplayName = "Technical improvement",
                 Fields = new[]
                 {
                     new CategoryFieldDefinition
                     {
                         Key = "TechArea",
-                        Label = "Technology Area",
+                        Label = "Technology area",
                         InputType = "select",
                         Options = new[] { "Backend", "Frontend", "Infrastructure", "Security", "Data/Analytics", "Other" },
                         IsRequired = true,
-                        GuidanceHint = "Select the primary technology domain your idea addresses."
+                        GuidanceHint = "Select the primary technology focus for your idea (values are stored in English in the system)."
                     },
                     new CategoryFieldDefinition
                     {
                         Key = "TechEffort",
-                        Label = "Estimated Implementation Effort",
+                        Label = "Estimated implementation effort",
                         InputType = "select",
                         Options = new[] { "Small — days", "Medium — weeks", "Large — months" },
                         IsRequired = true,
-                        GuidanceHint = "Estimate the engineering effort needed to implement this idea."
+                        GuidanceHint = "Choose the engineering effort required to realize this idea."
                     },
                     new CategoryFieldDefinition
                     {
                         Key = "TechBenefit",
-                        Label = "Expected Technical Benefit",
+                        Label = "Expected technical benefit",
                         InputType = "textarea",
                         IsRequired = true,
                         MaxLength = 500,
-                        GuidanceHint = "Describe the measurable technical improvement: performance gain, reliability, maintainability, or security."
+                        GuidanceHint = "Describe a measurable technical gain: performance, reliability, sustainability, or security."
                     }
                 }
             },
@@ -102,35 +102,35 @@ public static class CategoryDefinitions
             [ProcessImprovement] = new CategoryDefinition
             {
                 Key = ProcessImprovement,
-                DisplayName = "Process Improvement",
+                DisplayName = "Process improvement",
                 Fields = new[]
                 {
                     new CategoryFieldDefinition
                     {
                         Key = "ProcDepartment",
-                        Label = "Affected Department or Team",
+                        Label = "Affected unit or team",
                         InputType = "text",
                         IsRequired = true,
                         MaxLength = 100,
-                        GuidanceHint = "Name the team or department that would benefit most from this improvement."
+                        GuidanceHint = "Name the team or department that will benefit most from this improvement."
                     },
                     new CategoryFieldDefinition
                     {
                         Key = "ProcPainPoint",
-                        Label = "Current Process Pain Point",
+                        Label = "Current process pain point",
                         InputType = "textarea",
                         IsRequired = true,
                         MaxLength = 500,
-                        GuidanceHint = "Describe the specific inefficiency, bottleneck, or friction point this idea addresses."
+                        GuidanceHint = "Clearly explain inefficiency, bottlenecks, or friction in the current process."
                     },
                     new CategoryFieldDefinition
                     {
                         Key = "ProcSavings",
-                        Label = "Estimated Savings",
+                        Label = "Estimated savings",
                         InputType = "text",
                         IsRequired = false,
                         MaxLength = 200,
-                        GuidanceHint = "Optional. Estimate time or cost savings (e.g. \"2 hours/week per team member\")."
+                        GuidanceHint = "Optional. Estimate time or cost savings (e.g. 2 hours per person per week)."
                     }
                 }
             },
@@ -138,35 +138,35 @@ public static class CategoryDefinitions
             [ClientSolution] = new CategoryDefinition
             {
                 Key = ClientSolution,
-                DisplayName = "Client Solution",
+                DisplayName = "Customer solution",
                 Fields = new[]
                 {
                     new CategoryFieldDefinition
                     {
                         Key = "ClientSegment",
-                        Label = "Target Client Segment",
+                        Label = "Target customer segment",
                         InputType = "text",
                         IsRequired = true,
                         MaxLength = 200,
-                        GuidanceHint = "Name the client type or segment this solution is designed for."
+                        GuidanceHint = "Specify the customer type or segment this solution targets."
                     },
                     new CategoryFieldDefinition
                     {
                         Key = "ClientProblem",
-                        Label = "Client Problem Being Solved",
+                        Label = "Customer problem being solved",
                         InputType = "textarea",
                         IsRequired = true,
                         MaxLength = 500,
-                        GuidanceHint = "Describe the client's unmet need or pain point that this idea addresses."
+                        GuidanceHint = "Describe the unmet need or pain point for the customer."
                     },
                     new CategoryFieldDefinition
                     {
                         Key = "ClientImpact",
-                        Label = "Expected Business Impact",
+                        Label = "Expected business impact",
                         InputType = "text",
                         IsRequired = true,
                         MaxLength = 300,
-                        GuidanceHint = "Describe the measurable business outcome for the client (revenue, retention, satisfaction)."
+                        GuidanceHint = "Measurable outcome for the customer or business: revenue, retention, satisfaction, etc."
                     }
                 }
             }

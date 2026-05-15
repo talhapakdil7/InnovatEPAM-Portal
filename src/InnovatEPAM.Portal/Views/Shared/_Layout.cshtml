@@ -1,106 +1,456 @@
-﻿<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="en" class="h-full">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - InnovatEPAM Portal</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <title>@ViewData["Title"] — InnovatEPAM Portal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="~/css/app.min.css" asp-append-version="true" />
 </head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container">
-            <a class="navbar-brand fw-bold" asp-controller="Home" asp-action="Index">
-                <i class="bi bi-lightbulb-fill me-1"></i> InnovatEPAM
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
+<body class="min-h-screen bg-slate-50 @(User.Identity?.IsAuthenticated == true ? "auth-shell" : "")">
+
+@if (User.Identity?.IsAuthenticated == true)
+{
+    var ctrl = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+    var act  = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+    var shellHomeUrl = User.IsInRole("Admin") ? Url.Action("Dashboard", "Admin") : Url.Action("Index", "Ideas");
+    var hasBreadcrumb = ViewData["BreadcrumbParent"] != null;
+    var shellSearchQuery = Context.Request.Query["q"].ToString();
+    var ideasWorkspaceDrafts = string.Equals(ViewData["IdeasListFocus"]?.ToString(), "drafts", StringComparison.OrdinalIgnoreCase);
+    var isAdminDashboard = string.Equals(ctrl, "Admin", StringComparison.OrdinalIgnoreCase)
+        && string.Equals(act, "Dashboard", StringComparison.OrdinalIgnoreCase);
+
+    <!-- Mobile sidebar overlay -->
+    <div id="sidebar-overlay" class="sidebar-overlay hidden" onclick="closeSidebar()"></div>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar -translate-x-full lg:translate-x-0">
+
+        <!-- Logo -->
+        <div class="sidebar-logo">
+            <div class="w-11 h-11 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md shadow-blue-600/25">
+                <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1h4v1a2 2 0 11-4 0zM12 14c.015-.34.208-.646.477-.859a4 4 0 10-4.954 0c.27.213.462.519.477.859h4z" />
+                </svg>
+            </div>
+            <div class="min-w-0">
+                <p class="sidebar-brand-name">InnovatEPAM</p>
+                <p class="sidebar-brand-tag">Innovation Portal</p>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="sidebar-nav">
+            @if (User.IsInRole("Admin"))
+            {
+                <p class="sidebar-section-label">Overview</p>
+                <a href="@Url.Action("Dashboard", "Admin")"
+                   class="sidebar-link @(act == "Dashboard" ? "active" : "")"
+                   title="Dashboard">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>
+                    <span class="sidebar-label">Dashboard</span>
+                </a>
+                <a href="@Url.Action("Activity", "Admin")"
+                   class="sidebar-link @(act == "Activity" ? "active" : "")"
+                   title="Activity">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    <span class="sidebar-label">Activity</span>
+                </a>
+
+                <p class="sidebar-section-label">Review</p>
+                <a href="@Url.Action("Index", "Admin")"
+                   class="sidebar-link @(ctrl == "Admin" && (act == "Index" || act == "Detail") ? "active" : "")"
+                   title="All submissions from submitters">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                    </svg>
+                    <span class="sidebar-label">All submissions</span>
+                </a>
+                <a href="@Url.Action("DecisionHistory", "Admin")"
+                   class="sidebar-link @(act == "DecisionHistory" ? "active" : "")"
+                   title="Decision History">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                    <span class="sidebar-label">Decision History</span>
+                </a>
+
+                <p class="sidebar-section-label">Management</p>
+                <a href="@Url.Action("BlindReview", "Settings")"
+                   class="sidebar-link @(ctrl == "Settings" ? "active" : "")"
+                   title="Settings">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span class="sidebar-label">Settings</span>
+                </a>
+            }
+            else
+            {
+                <p class="sidebar-section-label">Workspace</p>
+                <a href="@Url.Action("Index", "Ideas")"
+                   class="sidebar-link @(ctrl == "Ideas" && !ideasWorkspaceDrafts && (act == "Index" || act == "Detail" || act == "Edit") ? "active" : "")">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span class="sidebar-label">My Ideas</span>
+                </a>
+                <a href="@Url.Action("Index", "Ideas", new { focus = "drafts" })"
+                   class="sidebar-link @(ctrl == "Ideas" && ideasWorkspaceDrafts ? "active" : "")"
+                   title="Saved drafts">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    <span class="sidebar-label">Drafts</span>
+                </a>
+                <a href="@Url.Action("Create", "Ideas")"
+                   class="sidebar-link @(ctrl == "Ideas" && act == "Create" ? "active" : "")">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span class="sidebar-label">Submit Idea</span>
+                </a>
+            }
+        </nav>
+
+        <!-- User footer -->
+        <div class="sidebar-footer">
+            <div class="flex items-center gap-3 p-2 rounded-xl bg-white border border-slate-200/90 shadow-sm">
+                <div class="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-sm ring-2 ring-white">
+                    @(User.Identity?.Name?.Substring(0, 1).ToUpper() ?? "U")
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-slate-900 text-sm font-semibold truncate leading-tight">@User.Identity?.Name</p>
+                    <p class="text-slate-400 text-[11px] font-medium mt-0.5">@(User.IsInRole("Admin") ? "Administrator" : "Submitter")</p>
+                </div>
+                <a href="@Url.Action("Logout", "Auth")" title="Sign out"
+                   class="w-9 h-9 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors shrink-0">
+                    <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main wrapper -->
+    <div id="main-shell" class="sidebar-layout-main min-h-screen flex flex-col">
+
+        <!-- Topbar (TailAdmin-style) -->
+        <header class="topbar gap-3">
+            <button type="button" onclick="toggleSidebar()" aria-label="Open menu" class="header-icon-btn lg:hidden -ml-1">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
             </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    @if (User.Identity?.IsAuthenticated == true)
+
+            <button type="button" onclick="toggleSidebarCollapse()" aria-label="Toggle sidebar width"
+                    class="header-icon-btn hidden lg:flex" title="Collapse sidebar">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7M19 19l-7-7 7-7" />
+                </svg>
+            </button>
+
+            @if (User.IsInRole("Admin"))
+            {
+                <div class="flex flex-col lg:flex-row flex-1 min-w-0 gap-2 lg:gap-4 px-2 items-stretch lg:items-center">
+                    <div class="topbar-search-shell min-w-0 flex-shrink lg:max-w-[14rem] @(isAdminDashboard ? "lg:flex-1" : "")">
+                        <p class="text-sm font-semibold text-slate-800 truncate">@(ViewData["Title"] ?? "Dashboard")</p>
+                        <p class="text-[11px] text-slate-400 truncate hidden sm:block">Innovation review operations</p>
+                    </div>
+                    @if (!isAdminDashboard)
                     {
-                        <li class="nav-item">
-                            <a class="nav-link" asp-controller="Ideas" asp-action="Index">
-                                <i class="bi bi-collection me-1"></i>My Ideas
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-controller="Ideas" asp-action="Create">
-                                <i class="bi bi-plus-circle me-1"></i>Submit Idea
-                            </a>
-                        </li>
-                        @if (User.IsInRole("Admin"))
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link" asp-controller="Admin" asp-action="Index">
-                                    <i class="bi bi-shield-check me-1"></i>Admin Review
+                        <form method="get" asp-controller="Admin" asp-action="Index" class="topbar-search w-full max-w-md flex-shrink-0" role="search">
+                            <svg class="w-[18px] h-[18px] text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            <input id="shell-search-input"
+                                   type="search"
+                                   name="q"
+                                   value="@shellSearchQuery"
+                                   autocomplete="off"
+                                   placeholder="Search ideas..."
+                                   class="flex-1 min-w-0 bg-transparent border-0 text-sm text-slate-700 placeholder:text-slate-400 focus:ring-0 focus:outline-none"
+                                   aria-label="Search ideas" />
+                            <kbd class="hidden xl:inline-flex items-center justify-center min-w-[1.625rem] h-7 px-1.5 rounded-md border border-slate-200 bg-white text-[11px] font-semibold text-slate-400 shadow-sm select-none font-sans">⌘</kbd>
+                            <kbd class="hidden xl:inline-flex items-center justify-center min-w-[1.625rem] h-7 px-1.5 rounded-md border border-slate-200 bg-white text-[11px] font-semibold text-slate-400 shadow-sm select-none font-sans">K</kbd>
+                        </form>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="topbar-search-shell flex-1 min-w-0 px-2">
+                    <p class="text-sm font-medium text-slate-600 truncate">@(ViewData["Title"] ?? "Workspace")</p>
+                </div>
+            }
+
+            <div class="flex items-center gap-1 sm:gap-2 shrink-0 ml-auto">
+
+                @if (User.IsInRole("Admin"))
+                {
+                    @await Component.InvokeAsync("AdminWorkqueueSummary")
+                    <span class="admin-badge">
+                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                        </svg>
+                        Admin
+                    </span>
+                }
+
+                <div class="relative hidden sm:block w-px h-8 bg-slate-200 mx-0.5" aria-hidden="true"></div>
+
+                <div class="relative" id="user-menu-container">
+                    <button type="button"
+                            id="user-menu-btn"
+                            class="user-avatar-btn border border-slate-200/90 bg-white shadow-sm hover:shadow"
+                            onclick="toggleUserMenu()"
+                            aria-haspopup="true"
+                            aria-expanded="false"
+                            aria-controls="user-menu-dropdown">
+                        <div class="user-avatar-ring ring-2 ring-slate-100">
+                            @(User.Identity?.Name?.Substring(0, 1).ToUpper() ?? "U")
+                        </div>
+                        <span class="hidden xl:block text-sm font-medium text-slate-700 max-w-[9rem] truncate leading-none">
+                            @User.Identity?.Name
+                        </span>
+                        <svg id="user-menu-chevron"
+                             class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200 flex-shrink-0 hidden xl:block"
+                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+
+                    <div id="user-menu-dropdown"
+                         class="user-dropdown-menu is-closed border-slate-200 shadow-xl shadow-slate-900/10"
+                         role="menu"
+                         aria-orientation="vertical"
+                         aria-labelledby="user-menu-btn">
+
+                        <div class="dropdown-header border-slate-100">
+                            <div class="flex items-center gap-3">
+                                <div class="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-sm font-bold shadow-sm flex-shrink-0">
+                                    @(User.Identity?.Name?.Substring(0, 1).ToUpper() ?? "U")
+                                </div>
+                                <div class="min-w-0">
+                                    <p class="text-sm font-semibold text-slate-900 truncate leading-tight">@User.Identity?.Name</p>
+                                    <p class="text-xs text-slate-400 mt-0.5">@(User.IsInRole("Admin") ? "Administrator" : "Submitter")</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="py-1.5" role="none">
+                            @if (User.IsInRole("Admin"))
+                            {
+                                <a href="@Url.Action("BlindReview", "Settings")" role="menuitem" class="dropdown-item">
+                                    <svg class="dropdown-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                    Settings
                                 </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" asp-controller="Settings" asp-action="BlindReview">
-                                    <i class="bi bi-gear me-1"></i>Settings
-                                </a>
-                            </li>
-                        }
-                    }
-                </ul>
-                <ul class="navbar-nav">
-                    @if (User.Identity?.IsAuthenticated == true)
-                    {
-                        <li class="nav-item">
-                            <span class="nav-link text-light opacity-75">
-                                <i class="bi bi-person-circle me-1"></i>@User.Identity.Name
-                            </span>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-controller="Auth" asp-action="Logout">
-                                <i class="bi bi-box-arrow-right me-1"></i>Logout
+                            }
+
+                            <div class="dropdown-divider"></div>
+
+                            <a href="@Url.Action("Logout", "Auth")" role="menuitem" class="dropdown-item-danger">
+                                <svg class="dropdown-item-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                </svg>
+                                Sign Out
                             </a>
-                        </li>
-                    }
-                    else
-                    {
-                        <li class="nav-item">
-                            <a class="nav-link" asp-controller="Auth" asp-action="Login">Login</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-controller="Auth" asp-action="Register">Register</a>
-                        </li>
-                    }
-                </ul>
+                        </div>
+                    </div>
+                </div>
             </div>
+        </header>
+
+        <div class="app-main-shell">
+
+            <!-- Breadcrumbs (TailAdmin: Ana sayfa › … › sayfa) -->
+            @if (hasBreadcrumb)
+            {
+                <nav class="app-breadcrumbs" aria-label="Breadcrumb">
+                    <a href="@shellHomeUrl" class="font-medium hover:text-blue-600">Home</a>
+                    <span class="app-breadcrumbs-sep">&gt;</span>
+                    <a href="@((string?)ViewData["BreadcrumbParentUrl"])" class="font-medium truncate max-w-[14rem] sm:max-w-xs">@ViewData["BreadcrumbParent"]</a>
+                    <span class="app-breadcrumbs-sep">&gt;</span>
+                    <span class="app-breadcrumbs-current truncate max-w-[16rem]" aria-current="page">@ViewData["Title"]</span>
+                </nav>
+            }
+
+            @if (TempData["Success"] != null)
+            {
+                <div class="alert-success mb-5" role="alert">
+                    <svg class="w-4 h-4 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                    </svg>
+                    <span>@TempData["Success"]</span>
+                </div>
+            }
+            @if (TempData["Error"] != null)
+            {
+                <div class="alert-error mb-5" role="alert">
+                    <svg class="w-4 h-4 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                    </svg>
+                    <span>@TempData["Error"]</span>
+                </div>
+            }
+
+            <main class="flex-1 min-h-0">
+                @RenderBody()
+            </main>
         </div>
-    </nav>
 
-    <main class="container mt-4 mb-5">
-        @if (TempData["Success"] != null)
-        {
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <i class="bi bi-check-circle me-2"></i>@TempData["Success"]
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <footer class="border-t border-slate-200/90 bg-white/80 px-6 lg:px-10 py-4">
+            <p class="text-xs text-slate-400 max-w-[1600px] mx-auto">&copy; @DateTime.Now.Year InnovatEPAM Portal</p>
+        </footer>
+    </div>
+}
+else
+{
+    <!-- Unauthenticated: full-page auth layout -->
+    <div class="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex flex-col items-center justify-center px-4 py-12">
+        <div class="w-full max-w-sm">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-12 h-12 bg-blue-600 rounded-2xl mb-4 shadow-lg">
+                    <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1h4v1a2 2 0 11-4 0zM12 14c.015-.34.208-.646.477-.859a4 4 0 10-4.954 0c.27.213.462.519.477.859h4z" />
+                    </svg>
+                </div>
+                <h1 class="text-2xl font-bold text-white">InnovatEPAM Portal</h1>
+                <p class="text-slate-400 text-sm mt-1">Employee Innovation Management</p>
             </div>
-        }
-        @if (TempData["Error"] != null)
-        {
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <i class="bi bi-exclamation-triangle me-2"></i>@TempData["Error"]
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        }
 
-        @RenderBody()
-    </main>
+            @if (TempData["Error"] != null)
+            {
+                <div class="alert-error mb-4">
+                    <svg class="w-4 h-4 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                    </svg>
+                    <span>@TempData["Error"]</span>
+                </div>
+            }
 
-    <footer class="bg-light border-top py-3 mt-auto">
-        <div class="container text-center text-muted small">
-            &copy; @DateTime.Now.Year InnovatEPAM Portal — Employee Innovation Ideas Management
+            @RenderBody()
         </div>
-    </footer>
+    </div>
+}
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
-    @await RenderSectionAsync("Scripts", required: false)
+<script>
+    /* ── Sidebar ── */
+    function toggleSidebar() {
+        var s = document.getElementById('sidebar');
+        var o = document.getElementById('sidebar-overlay');
+        if (s && s.classList.contains('-translate-x-full')) {
+            s.classList.remove('-translate-x-full');
+            if (o) o.classList.remove('hidden');
+        } else {
+            if (s) s.classList.add('-translate-x-full');
+            if (o) o.classList.add('hidden');
+        }
+    }
+    function closeSidebar() {
+        var s = document.getElementById('sidebar');
+        var o = document.getElementById('sidebar-overlay');
+        if (s) s.classList.add('-translate-x-full');
+        if (o) o.classList.add('hidden');
+    }
+
+    function toggleSidebarCollapse() {
+        document.body.classList.toggle('sidebar-collapsed');
+        try {
+            localStorage.setItem('iepamSidebarCollapsed', document.body.classList.contains('sidebar-collapsed') ? '1' : '0');
+        } catch (x) { }
+    }
+    document.addEventListener('DOMContentLoaded', function () {
+        try {
+            if (localStorage.getItem('iepamSidebarCollapsed') === '1')
+                document.body.classList.add('sidebar-collapsed');
+        } catch (x) { }
+    });
+
+    /* ── User Menu Dropdown ── */
+    function toggleUserMenu() {
+        var dropdown = document.getElementById('user-menu-dropdown');
+        var btn = document.getElementById('user-menu-btn');
+        var chevron = document.getElementById('user-menu-chevron');
+        if (!dropdown) return;
+
+        var isOpen = dropdown.classList.contains('is-open');
+        if (isOpen) {
+            _closeUserMenu(dropdown, btn, chevron);
+        } else {
+            dropdown.classList.remove('is-closed');
+            dropdown.classList.add('is-open');
+            btn.setAttribute('aria-expanded', 'true');
+            if (chevron) chevron.style.transform = 'rotate(180deg)';
+        }
+    }
+
+    function _closeUserMenu(dropdown, btn, chevron) {
+        if (!dropdown) dropdown = document.getElementById('user-menu-dropdown');
+        if (!btn) btn = document.getElementById('user-menu-btn');
+        if (!chevron) chevron = document.getElementById('user-menu-chevron');
+        if (!dropdown) return;
+        dropdown.classList.remove('is-open');
+        dropdown.classList.add('is-closed');
+        if (btn) btn.setAttribute('aria-expanded', 'false');
+        if (chevron) chevron.style.transform = '';
+    }
+
+    /* Close dropdown on outside click */
+    document.addEventListener('click', function (e) {
+        var container = document.getElementById('user-menu-container');
+        if (container && !container.contains(e.target)) {
+            _closeUserMenu();
+        }
+    });
+
+    /* Close dropdown on Escape · Cmd/Ctrl+K focuses global search */
+    document.addEventListener('keydown', function (e) {
+        if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+            e.preventDefault();
+            var inp = document.getElementById('shell-search-input');
+            if (inp) { inp.focus(); try { inp.select(); } catch (x) {} }
+            return;
+        }
+        if (e.key === 'Escape') {
+            _closeUserMenu();
+            closeSidebar();
+        }
+    });
+
+    /* ── Page Tabs ── */
+    function switchTab(groupId, tabId) {
+        var group = document.getElementById(groupId);
+        if (!group) return;
+
+        group.querySelectorAll('.tab-btn').forEach(function (btn) {
+            btn.classList.remove('tab-active');
+            btn.setAttribute('aria-selected', 'false');
+        });
+        group.querySelectorAll('.tab-panel').forEach(function (panel) {
+            panel.classList.remove('tab-panel-active');
+        });
+
+        var activeBtn = group.querySelector('[data-tab="' + tabId + '"]');
+        var activePanel = document.getElementById(tabId);
+        if (activeBtn) {
+            activeBtn.classList.add('tab-active');
+            activeBtn.setAttribute('aria-selected', 'true');
+        }
+        if (activePanel) activePanel.classList.add('tab-panel-active');
+    }
+</script>
+@await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

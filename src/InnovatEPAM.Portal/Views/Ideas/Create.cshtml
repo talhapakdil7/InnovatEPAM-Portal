@@ -1,204 +1,210 @@
 @model CreateIdeaViewModel
 @{
-    ViewData["Title"] = "Submit New Idea";
+    ViewData["Title"] = "New idea";
+    ViewData["BreadcrumbParent"] = "My ideas";
+    ViewData["BreadcrumbParentUrl"] = Url.Action("Index", "Ideas");
 }
 
-<div class="row justify-content-center">
-    <div class="col-md-8 col-lg-7">
-        <div class="d-flex align-items-center mb-3">
-            <a asp-action="Index" class="btn btn-sm btn-outline-secondary me-3">
-                <i class="bi bi-arrow-left"></i>
-            </a>
-            <h2 class="mb-0"><i class="bi bi-lightbulb me-2 text-warning"></i>Submit New Idea</h2>
-        </div>
+<div class="mt-4 max-w-3xl">
 
-        <div class="card shadow-sm">
-            <div class="card-body p-4">
-                <form asp-action="Create" method="post" enctype="multipart/form-data">
-                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
-
-                    @* Step 1: Category selection (FR-001) *@
-                    <div class="mb-4">
-                        <label asp-for="Category" class="form-label fw-semibold">
-                            Innovation Category <span class="text-danger">*</span>
-                        </label>
-                        <select asp-for="Category" id="categorySelect" class="form-select">
-                            <option value="">— Select a category —</option>
-                            @foreach (var cat in CategoryDefinitions.All.Values)
-                            {
-                                <option value="@cat.Key">@cat.DisplayName</option>
-                            }
-                        </select>
-                        <div class="form-text">Choose the category that best describes your innovation idea.</div>
-                        <span asp-validation-for="Category" class="text-danger small"></span>
-                    </div>
-
-                    @* Step 2: Category-specific fields (FR-002, FR-003, FR-004) rendered server-side, shown/hidden by JS *@
-
-                    @* Technical Improvement section *@
-                    <div id="section-TechnicalImprovement" class="category-section card border-primary mb-4" style="display:none">
-                        <div class="card-header bg-primary bg-opacity-10 fw-semibold text-primary">
-                            <i class="bi bi-cpu me-2"></i>Technical Improvement Details
-                        </div>
-                        <div class="card-body">
-                            <div class="mb-3">
-                                <label for="TechArea" class="form-label fw-semibold">
-                                    Technology Area <span class="text-danger">*</span>
-                                </label>
-                                <select asp-for="TechArea" class="form-select">
-                                    <option value="">— Select —</option>
-                                    @foreach (var opt in CategoryDefinitions.All[CategoryDefinitions.TechnicalImprovement]
-                                        .Fields.First(f => f.Key == "TechArea").Options)
-                                    {
-                                        <option value="@opt">@opt</option>
-                                    }
-                                </select>
-                                <div class="form-text">@CategoryDefinitions.All[CategoryDefinitions.TechnicalImprovement].Fields.First(f => f.Key == "TechArea").GuidanceHint</div>
-                                <span asp-validation-for="TechArea" class="text-danger small"></span>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="TechEffort" class="form-label fw-semibold">
-                                    Estimated Implementation Effort <span class="text-danger">*</span>
-                                </label>
-                                <select asp-for="TechEffort" class="form-select">
-                                    <option value="">— Select —</option>
-                                    @foreach (var opt in CategoryDefinitions.All[CategoryDefinitions.TechnicalImprovement]
-                                        .Fields.First(f => f.Key == "TechEffort").Options)
-                                    {
-                                        <option value="@opt">@opt</option>
-                                    }
-                                </select>
-                                <div class="form-text">@CategoryDefinitions.All[CategoryDefinitions.TechnicalImprovement].Fields.First(f => f.Key == "TechEffort").GuidanceHint</div>
-                                <span asp-validation-for="TechEffort" class="text-danger small"></span>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="TechBenefit" class="form-label fw-semibold">
-                                    Expected Technical Benefit <span class="text-danger">*</span>
-                                </label>
-                                <textarea asp-for="TechBenefit" class="form-control" rows="4" maxlength="500"
-                                          placeholder="Describe the measurable technical improvement..."></textarea>
-                                <div class="form-text">@CategoryDefinitions.All[CategoryDefinitions.TechnicalImprovement].Fields.First(f => f.Key == "TechBenefit").GuidanceHint Max 500 chars.</div>
-                                <span asp-validation-for="TechBenefit" class="text-danger small"></span>
-                            </div>
-                        </div>
-                    </div>
-
-                    @* Process Improvement section *@
-                    <div id="section-ProcessImprovement" class="category-section card border-success mb-4" style="display:none">
-                        <div class="card-header bg-success bg-opacity-10 fw-semibold text-success">
-                            <i class="bi bi-diagram-3 me-2"></i>Process Improvement Details
-                        </div>
-                        <div class="card-body">
-                            <div class="mb-3">
-                                <label for="ProcDepartment" class="form-label fw-semibold">
-                                    Affected Department or Team <span class="text-danger">*</span>
-                                </label>
-                                <input asp-for="ProcDepartment" class="form-control" maxlength="100"
-                                       placeholder="e.g. Engineering, HR, Finance..." />
-                                <div class="form-text">@CategoryDefinitions.All[CategoryDefinitions.ProcessImprovement].Fields.First(f => f.Key == "ProcDepartment").GuidanceHint</div>
-                                <span asp-validation-for="ProcDepartment" class="text-danger small"></span>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="ProcPainPoint" class="form-label fw-semibold">
-                                    Current Process Pain Point <span class="text-danger">*</span>
-                                </label>
-                                <textarea asp-for="ProcPainPoint" class="form-control" rows="4" maxlength="500"
-                                          placeholder="Describe the inefficiency or bottleneck..."></textarea>
-                                <div class="form-text">@CategoryDefinitions.All[CategoryDefinitions.ProcessImprovement].Fields.First(f => f.Key == "ProcPainPoint").GuidanceHint Max 500 chars.</div>
-                                <span asp-validation-for="ProcPainPoint" class="text-danger small"></span>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="ProcSavings" class="form-label fw-semibold">
-                                    Estimated Savings
-                                </label>
-                                <input asp-for="ProcSavings" class="form-control" maxlength="200"
-                                       placeholder="e.g. 2 hours/week per team member" />
-                                <div class="form-text">@CategoryDefinitions.All[CategoryDefinitions.ProcessImprovement].Fields.First(f => f.Key == "ProcSavings").GuidanceHint</div>
-                                <span asp-validation-for="ProcSavings" class="text-danger small"></span>
-                            </div>
-                        </div>
-                    </div>
-
-                    @* Client Solution section *@
-                    <div id="section-ClientSolution" class="category-section card border-info mb-4" style="display:none">
-                        <div class="card-header bg-info bg-opacity-10 fw-semibold text-info">
-                            <i class="bi bi-people me-2"></i>Client Solution Details
-                        </div>
-                        <div class="card-body">
-                            <div class="mb-3">
-                                <label for="ClientSegment" class="form-label fw-semibold">
-                                    Target Client Segment <span class="text-danger">*</span>
-                                </label>
-                                <input asp-for="ClientSegment" class="form-control" maxlength="200"
-                                       placeholder="e.g. Enterprise retail clients, SMB financial services..." />
-                                <div class="form-text">@CategoryDefinitions.All[CategoryDefinitions.ClientSolution].Fields.First(f => f.Key == "ClientSegment").GuidanceHint</div>
-                                <span asp-validation-for="ClientSegment" class="text-danger small"></span>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="ClientProblem" class="form-label fw-semibold">
-                                    Client Problem Being Solved <span class="text-danger">*</span>
-                                </label>
-                                <textarea asp-for="ClientProblem" class="form-control" rows="4" maxlength="500"
-                                          placeholder="Describe the client's unmet need or pain point..."></textarea>
-                                <div class="form-text">@CategoryDefinitions.All[CategoryDefinitions.ClientSolution].Fields.First(f => f.Key == "ClientProblem").GuidanceHint Max 500 chars.</div>
-                                <span asp-validation-for="ClientProblem" class="text-danger small"></span>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="ClientImpact" class="form-label fw-semibold">
-                                    Expected Business Impact <span class="text-danger">*</span>
-                                </label>
-                                <input asp-for="ClientImpact" class="form-control" maxlength="300"
-                                       placeholder="e.g. 15% increase in client retention..." />
-                                <div class="form-text">@CategoryDefinitions.All[CategoryDefinitions.ClientSolution].Fields.First(f => f.Key == "ClientImpact").GuidanceHint</div>
-                                <span asp-validation-for="ClientImpact" class="text-danger small"></span>
-                            </div>
-                        </div>
-                    </div>
-
-                    @* Step 3: Common fields (U2: Title moved below category section per spec) *@
-                    <div class="mb-3">
-                        <label asp-for="Title" class="form-label fw-semibold">Title <span class="text-danger">*</span></label>
-                        <input asp-for="Title" class="form-control" placeholder="Give your idea a clear, concise title" maxlength="200" />
-                        <div class="form-text">Max 200 characters.</div>
-                        <span asp-validation-for="Title" class="text-danger small"></span>
-                    </div>
-
-                    <div class="mb-3">
-                        <label asp-for="Description" class="form-label fw-semibold">Description</label>
-                        <textarea asp-for="Description" class="form-control" rows="6"
-                                  placeholder="Describe your idea: problem it solves, proposed solution, expected benefits..."
-                                  maxlength="2000"></textarea>
-                        <div class="form-text">Optional. Max 2000 characters.</div>
-                        <span asp-validation-for="Description" class="text-danger small"></span>
-                    </div>
-
-                    <div class="mb-4">
-                        <label asp-for="Attachment" class="form-label fw-semibold">Attachment</label>
-                        <input asp-for="Attachment" class="form-control" type="file"
-                               accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" />
-                        <div class="form-text">@Html.DisplayNameFor(m => m.Attachment)</div>
-                        <span asp-validation-for="Attachment" class="text-danger small"></span>
-                    </div>
-
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-send me-1"></i>Submit Idea
-                        </button>
-                        <button type="submit" formaction="@Url.Action("SaveDraft")" class="btn btn-outline-secondary">
-                            <i class="bi bi-floppy me-1"></i>Save as Draft
-                        </button>
-                        <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
-                    </div>
-                </form>
-            </div>
+    <!-- Page Header -->
+    <div class="flex items-center gap-3 mb-6">
+        <a asp-action="Index" class="btn-ghost btn-icon btn-sm text-gray-500">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+        </a>
+        <div>
+            <h1 class="text-xl font-bold text-gray-900">New idea</h1>
+            <p class="text-sm text-gray-500 mt-0.5">Share your innovation with the team</p>
         </div>
     </div>
+
+    <form asp-action="Create" method="post" enctype="multipart/form-data">
+
+        <div asp-validation-summary="ModelOnly" class="alert-error mb-5" role="alert">
+            <svg class="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+        </div>
+
+        <!-- Step 1: Category -->
+        <div class="form-section">
+            <h2 class="form-section-title">
+                <span class="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">1</span>
+                Innovation category
+            </h2>
+            <div class="form-group mb-0">
+                <label asp-for="Category" class="form-label">
+                    Category <span class="text-red-500">*</span>
+                </label>
+                <select asp-for="Category" id="categorySelect" class="form-select">
+                    <option value="">— Select a category —</option>
+                    @foreach (var cat in CategoryDefinitions.All.Values)
+                    {
+                        <option value="@cat.Key">@cat.DisplayName</option>
+                    }
+                </select>
+                <p class="form-hint">Choose the category that best fits your idea.</p>
+                <span asp-validation-for="Category" class="form-error"></span>
+            </div>
+        </div>
+
+        <!-- Dynamic Category Sections -->
+
+        <!-- Technical Improvement -->
+        <div id="section-TechnicalImprovement" class="category-section form-section border-l-4 border-blue-500" style="display:none">
+            <h2 class="form-section-title text-blue-700">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2v-4M9 21H5a2 2 0 01-2-2v-4m0 0h18" />
+                </svg>
+                Technical improvement details
+            </h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div class="form-group mb-0">
+                    <label for="TechArea" class="form-label">Technology area <span class="text-red-500">*</span></label>
+                    <select asp-for="TechArea" class="form-select">
+                        <option value="">— Select —</option>
+                        @foreach (var opt in CategoryDefinitions.All[CategoryDefinitions.TechnicalImprovement]
+                            .Fields.First(f => f.Key == "TechArea").Options)
+                        {
+                            <option value="@opt">@opt</option>
+                        }
+                    </select>
+                    <p class="form-hint">@CategoryDefinitions.All[CategoryDefinitions.TechnicalImprovement].Fields.First(f => f.Key == "TechArea").GuidanceHint</p>
+                    <span asp-validation-for="TechArea" class="form-error"></span>
+                </div>
+                <div class="form-group mb-0">
+                    <label for="TechEffort" class="form-label">Estimated implementation effort <span class="text-red-500">*</span></label>
+                    <select asp-for="TechEffort" class="form-select">
+                        <option value="">— Select —</option>
+                        @foreach (var opt in CategoryDefinitions.All[CategoryDefinitions.TechnicalImprovement]
+                            .Fields.First(f => f.Key == "TechEffort").Options)
+                        {
+                            <option value="@opt">@opt</option>
+                        }
+                    </select>
+                    <span asp-validation-for="TechEffort" class="form-error"></span>
+                </div>
+            </div>
+            <div class="form-group mt-5 mb-0">
+                <label for="TechBenefit" class="form-label">Expected technical benefit <span class="text-red-500">*</span></label>
+                <textarea asp-for="TechBenefit" class="form-textarea" rows="4" maxlength="500"
+                          placeholder="Briefly describe the measurable technical gain…"></textarea>
+                <p class="form-hint">@CategoryDefinitions.All[CategoryDefinitions.TechnicalImprovement].Fields.First(f => f.Key == "TechBenefit").GuidanceHint Up to 500 characters.</p>
+                <span asp-validation-for="TechBenefit" class="form-error"></span>
+            </div>
+        </div>
+
+        <!-- Process Improvement -->
+        <div id="section-ProcessImprovement" class="category-section form-section border-l-4 border-emerald-500" style="display:none">
+            <h2 class="form-section-title text-emerald-700">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Process improvement details
+            </h2>
+            <div class="form-group mb-5">
+                <label for="ProcDepartment" class="form-label">Affected unit or team <span class="text-red-500">*</span></label>
+                <input asp-for="ProcDepartment" class="form-input" maxlength="100" placeholder="e.g. Engineering, HR…" />
+                <p class="form-hint">@CategoryDefinitions.All[CategoryDefinitions.ProcessImprovement].Fields.First(f => f.Key == "ProcDepartment").GuidanceHint</p>
+                <span asp-validation-for="ProcDepartment" class="form-error"></span>
+            </div>
+            <div class="form-group mb-5">
+                <label for="ProcPainPoint" class="form-label">Current process pain point <span class="text-red-500">*</span></label>
+                <textarea asp-for="ProcPainPoint" class="form-textarea" rows="4" maxlength="500"
+                          placeholder="Explain inefficiency or bottlenecks…"></textarea>
+                <p class="form-hint">@CategoryDefinitions.All[CategoryDefinitions.ProcessImprovement].Fields.First(f => f.Key == "ProcPainPoint").GuidanceHint Up to 500 characters.</p>
+                <span asp-validation-for="ProcPainPoint" class="form-error"></span>
+            </div>
+            <div class="form-group mb-0">
+                <label for="ProcSavings" class="form-label">Estimated savings</label>
+                <input asp-for="ProcSavings" class="form-input" maxlength="200" placeholder="e.g. 2 hours per person per week" />
+                <p class="form-hint">@CategoryDefinitions.All[CategoryDefinitions.ProcessImprovement].Fields.First(f => f.Key == "ProcSavings").GuidanceHint</p>
+                <span asp-validation-for="ProcSavings" class="form-error"></span>
+            </div>
+        </div>
+
+        <!-- Client Solution -->
+        <div id="section-ClientSolution" class="category-section form-section border-l-4 border-violet-500" style="display:none">
+            <h2 class="form-section-title text-violet-700">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                Customer solution details
+            </h2>
+            <div class="form-group mb-5">
+                <label for="ClientSegment" class="form-label">Target customer segment <span class="text-red-500">*</span></label>
+                <input asp-for="ClientSegment" class="form-input" maxlength="200"
+                       placeholder="e.g. enterprise retail, SME finance…" />
+                <p class="form-hint">@CategoryDefinitions.All[CategoryDefinitions.ClientSolution].Fields.First(f => f.Key == "ClientSegment").GuidanceHint</p>
+                <span asp-validation-for="ClientSegment" class="form-error"></span>
+            </div>
+            <div class="form-group mb-5">
+                <label for="ClientProblem" class="form-label">Customer problem addressed <span class="text-red-500">*</span></label>
+                <textarea asp-for="ClientProblem" class="form-textarea" rows="4" maxlength="500"
+                          placeholder="Describe the need or pain point…"></textarea>
+                <p class="form-hint">@CategoryDefinitions.All[CategoryDefinitions.ClientSolution].Fields.First(f => f.Key == "ClientProblem").GuidanceHint Up to 500 characters.</p>
+                <span asp-validation-for="ClientProblem" class="form-error"></span>
+            </div>
+            <div class="form-group mb-0">
+                <label for="ClientImpact" class="form-label">Expected business impact <span class="text-red-500">*</span></label>
+                <input asp-for="ClientImpact" class="form-input" maxlength="300"
+                       placeholder="e.g. 15% higher customer satisfaction…" />
+                <p class="form-hint">@CategoryDefinitions.All[CategoryDefinitions.ClientSolution].Fields.First(f => f.Key == "ClientImpact").GuidanceHint</p>
+                <span asp-validation-for="ClientImpact" class="form-error"></span>
+            </div>
+        </div>
+
+        <!-- Step 2: Core Idea Info -->
+        <div class="form-section">
+            <h2 class="form-section-title">
+                <span class="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">2</span>
+                Idea summary
+            </h2>
+
+            <div class="form-group">
+                <label asp-for="Title" class="form-label">Title <span class="text-red-500">*</span></label>
+                <input asp-for="Title" class="form-input" placeholder="Short, clear title" maxlength="200" />
+                <p class="form-hint">Up to 200 characters.</p>
+                <span asp-validation-for="Title" class="form-error"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Description" class="form-label">Description</label>
+                <textarea asp-for="Description" class="form-textarea" rows="6"
+                          placeholder="Problem, proposed solution, benefits…"
+                          maxlength="2000"></textarea>
+                <p class="form-hint">Optional. Up to 2000 characters.</p>
+                <span asp-validation-for="Description" class="form-error"></span>
+            </div>
+
+            <div class="form-group mb-0">
+                <label asp-for="Attachment" class="form-label">Attachment</label>
+                <input asp-for="Attachment" class="form-input" type="file"
+                       accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" />
+                <p class="form-hint">PDF, DOC, DOCX, XLS, XLSX, JPG, PNG — max 10 MB</p>
+                <span asp-validation-for="Attachment" class="form-error"></span>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex flex-wrap items-center gap-3">
+            <button type="submit" class="btn-primary btn-lg">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+                Submit idea
+            </button>
+            <button type="submit" formaction="@Url.Action("SaveDraft")" class="btn-secondary btn-lg">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                </svg>
+                Save draft
+            </button>
+            <a asp-action="Index" class="btn-ghost">Cancel</a>
+        </div>
+    </form>
 </div>
 
 @section Scripts {
@@ -207,7 +213,6 @@
     @if (Model.Category != null)
     {
         <script>
-            // Re-apply category on validation failure (server-side redirect back)
             document.addEventListener('DOMContentLoaded', function () {
                 initCategoryForm('@Model.Category');
             });

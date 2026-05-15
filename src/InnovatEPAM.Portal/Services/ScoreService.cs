@@ -32,12 +32,12 @@ public class ScoreService : IScoreService
     public async Task SubmitScoreAsync(Guid ideaId, Guid adminId, SubmitScoreViewModel vm)
     {
         var idea = await _ideaRepo.GetByIdAsync(ideaId)
-            ?? throw new InvalidOperationException($"Idea {ideaId} not found.");
+            ?? throw new InvalidOperationException($"Idea not found: {ideaId}.");
 
         if (idea.Status is IdeaStatus.Draft or IdeaStatus.Accepted or IdeaStatus.Rejected)
             throw new InvalidOperationException(
-                $"Scoring is not allowed for ideas with status '{idea.Status}'. " +
-                "Only Submitted and Under Review ideas can be scored.");
+                $"Scoring is not allowed in status '{idea.Status}'. " +
+                "Only ideas in Submitted or In review can be scored.");
 
         var score = new IdeaScore
         {
@@ -52,6 +52,26 @@ public class ScoreService : IScoreService
         };
 
         await _scoreRepo.UpsertAsync(score);
+
+        // First score moves the idea from triage (Submitted) to active review (UnderReview).
+        if (idea.Status == IdeaStatus.Submitted)
+        {
+            idea.Status = IdeaStatus.UnderReview;
+            idea.LastModifiedDate = DateTime.UtcNow;
+            
+            try
+            {
+                await _ideaRepo.UpdateAsync(idea);
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning("Concurrency error updating idea status during scoring for idea {IdeaId}: {Message}", 
+                    ideaId, ex.Message);
+                throw new InvalidOperationException(
+                    $"Could not complete the scoring operation due to concurrent modifications. " +
+                    $"Details: {ex.Message}", ex);
+            }
+        }
 
         _logger.LogInformation(
             "Admin {AdminId} submitted/updated score for idea {IdeaId}",
@@ -164,5 +184,16 @@ public class ScoreService : IScoreService
 
                     return (overall, scorerCount);
                 });
+    }
+
+    /// <inheritdoc/>
+    public async Task<HashSet<Guid>> GetIdeaIdsScoredByAdminAsync(Guid adminId, IEnumerable<Guid> ideaIds)
+    {
+        var ids = ideaIds.Distinct().ToList();
+        if (ids.Count == 0)
+            return new HashSet<Guid>();
+
+        var rows = await _scoreRepo.GetBulkForIdeasAsync(ids);
+        return rows.Where(r => r.AdminId == adminId).Select(r => r.IdeaId).ToHashSet();
     }
 }

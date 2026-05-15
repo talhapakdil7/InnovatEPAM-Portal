@@ -1,0 +1,8 @@
+@model AdminDashboardViewModel
+@{
+    ViewData["Title"] = "Overview";
+}
+@await Html.PartialAsync("~/Views/Admin/Dashboard/_DashboardBlindBanner.cshtml", Model)
+@await Html.PartialAsync("~/Views/Admin/Dashboard/_DashboardSummaryCards.cshtml", Model)
+@await Html.PartialAsync("~/Views/Admin/Dashboard/_DashboardAnalytics.cshtml", Model)
+@await Html.PartialAsync("~/Views/Admin/Dashboard/_DashboardQueues.cshtml", Model)

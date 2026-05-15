@@ -12,7 +12,7 @@ public interface IIdeaService
     /// Returns all ideas visible to admins, optionally filtered by status and category key.
     /// Each DTO includes a resolved <c>CategoryDisplayName</c>.
     /// </summary>
-    Task<List<IdeaListItemDTO>> GetAllIdeasAsync(string? statusFilter, string? categoryFilter = null);
+    Task<List<IdeaListItemDTO>> GetAllIdeasAsync(string? statusFilter, string? categoryFilter = null, string? searchQuery = null);
     Task<(bool Success, string? Error)> UpdateStatusAsync(Guid ideaId, string newStatus, Guid adminId);
     Task<(string FileName, byte[] Data, string ContentType)?> DownloadAttachmentAsync(Guid attachmentId, Guid userId, bool isAdmin);
 
@@ -53,4 +53,19 @@ public interface IIdeaService
     /// <param name="submitterId">The ID of the submitter; must match the draft's owner.</param>
     /// <returns>Success flag and optional error message.</returns>
     Task<(bool Success, string? Error)> DeleteDraftAsync(Guid draftId, Guid submitterId);
+
+    /// <summary>
+    /// Permanently removes an idea owned by the submitter when allowed (draft, triage-only submission, or accepted/rejected).
+    /// </summary>
+    Task<(bool Success, string? Error)> DeleteMyIdeaAsync(Guid ideaId, Guid submitterId);
+
+    /// <summary>
+    /// Updates a submitted idea while still in triage (no review stage, no scores).
+    /// </summary>
+    Task<(bool Success, string? Error)> UpdateSubmittedIdeaAsync(Guid ideaId, Guid submitterId, EditDraftViewModel vm);
+
+    /// <summary>
+    /// Permanently deletes a submitted idea before review engagement.
+    /// </summary>
+    Task<(bool Success, string? Error)> WithdrawSubmittedIdeaAsync(Guid ideaId, Guid submitterId);
 }

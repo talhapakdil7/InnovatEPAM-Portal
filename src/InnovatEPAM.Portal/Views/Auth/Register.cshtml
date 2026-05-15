@@ -1,62 +1,67 @@
 @model RegisterViewModel
 @{
     ViewData["Title"] = "Register";
+    Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<div class="row justify-content-center">
-    <div class="col-md-6 col-lg-5">
-        <div class="card shadow-sm">
-            <div class="card-body p-4">
-                <h2 class="card-title text-center mb-4">
-                    <i class="bi bi-person-plus me-2"></i>Create Account
-                </h2>
+<div class="bg-white rounded-2xl shadow-2xl p-8">
+    <div class="mb-6">
+        <h2 class="text-2xl font-bold text-gray-900">Create an account</h2>
+        <p class="text-sm text-gray-500 mt-1">Join InnovatEPAM to share innovation ideas</p>
+    </div>
 
-                <form asp-action="Register" method="post">
-                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+    <form asp-action="Register" method="post">
+        <div asp-validation-summary="ModelOnly" class="alert-error mb-5" role="alert">
+            <svg class="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+        </div>
 
-                    <div class="row g-3 mb-3">
-                        <div class="col-6">
-                            <label asp-for="FirstName" class="form-label fw-semibold"></label>
-                            <input asp-for="FirstName" class="form-control" placeholder="First name" />
-                            <span asp-validation-for="FirstName" class="text-danger small"></span>
-                        </div>
-                        <div class="col-6">
-                            <label asp-for="LastName" class="form-label fw-semibold"></label>
-                            <input asp-for="LastName" class="form-control" placeholder="Last name" />
-                            <span asp-validation-for="LastName" class="text-danger small"></span>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label asp-for="Email" class="form-label fw-semibold"></label>
-                        <input asp-for="Email" class="form-control" placeholder="you@company.com" />
-                        <span asp-validation-for="Email" class="text-danger small"></span>
-                    </div>
-
-                    <div class="mb-3">
-                        <label asp-for="Password" class="form-label fw-semibold"></label>
-                        <input asp-for="Password" class="form-control" placeholder="Min. 12 characters" />
-                        <div class="form-text">Must include uppercase, lowercase, number and special character.</div>
-                        <span asp-validation-for="Password" class="text-danger small"></span>
-                    </div>
-
-                    <div class="mb-4">
-                        <label asp-for="ConfirmPassword" class="form-label fw-semibold"></label>
-                        <input asp-for="ConfirmPassword" class="form-control" placeholder="Repeat password" />
-                        <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
-                    </div>
-
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="bi bi-person-check me-1"></i>Register
-                    </button>
-                </form>
-
-                <hr class="my-3" />
-                <p class="text-center mb-0 small">
-                    Already have an account?
-                    <a asp-action="Login" class="fw-semibold">Sign in</a>
-                </p>
+        <div class="grid grid-cols-2 gap-4 mb-0">
+            <div class="form-group">
+                <label asp-for="FirstName" class="form-label">First name</label>
+                <input asp-for="FirstName" class="form-input" placeholder="First name" autocomplete="given-name" />
+                <span asp-validation-for="FirstName" class="form-error"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="LastName" class="form-label">Last name</label>
+                <input asp-for="LastName" class="form-input" placeholder="Last name" autocomplete="family-name" />
+                <span asp-validation-for="LastName" class="form-error"></span>
             </div>
         </div>
+
+        <div class="form-group">
+            <label asp-for="Email" class="form-label">Email</label>
+            <input asp-for="Email" class="form-input" placeholder="you@company.com" autocomplete="email" />
+            <span asp-validation-for="Email" class="form-error"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Password" class="form-label">Password</label>
+            <input asp-for="Password" class="form-input" placeholder="At least 12 characters" autocomplete="new-password" />
+            <p class="form-hint">Include upper and lowercase letters, a digit, and a special character.</p>
+            <span asp-validation-for="Password" class="form-error"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="ConfirmPassword" class="form-label">Confirm password</label>
+            <input asp-for="ConfirmPassword" class="form-input" placeholder="Re-enter your password" autocomplete="new-password" />
+            <span asp-validation-for="ConfirmPassword" class="form-error"></span>
+        </div>
+
+        <button type="submit" class="btn-primary w-full justify-center py-3 text-base font-semibold mt-2">
+            Create account
+        </button>
+    </form>
+
+    <div class="mt-6 pt-5 border-t border-gray-100 text-center">
+        <p class="text-sm text-gray-500">
+            Already have an account?
+            <a asp-action="Login" class="text-blue-600 font-semibold hover:text-blue-700">Sign in</a>
+        </p>
     </div>
 </div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

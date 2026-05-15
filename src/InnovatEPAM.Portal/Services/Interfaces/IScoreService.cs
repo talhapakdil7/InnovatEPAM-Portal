@@ -47,4 +47,9 @@ public interface IScoreService
     /// Keys not present in the result have zero scorers.
     /// </summary>
     Task<Dictionary<Guid, (decimal? OverallAverage, int ScorerCount)>> GetAggregatesForIdeasAsync(IEnumerable<Guid> ideaIds);
+
+    /// <summary>
+    /// Returns the subset of <paramref name="ideaIds"/> for which <paramref name="adminId"/> has submitted a score.
+    /// </summary>
+    Task<HashSet<Guid>> GetIdeaIdsScoredByAdminAsync(Guid adminId, IEnumerable<Guid> ideaIds);
 }

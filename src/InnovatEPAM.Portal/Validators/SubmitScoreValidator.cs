@@ -17,7 +17,7 @@ public class SubmitScoreValidator : AbstractValidator<SubmitScoreViewModel>
                     || x.BusinessImpact.HasValue
                     || x.ImplementationValue.HasValue)
             .WithName("Score")
-            .WithMessage("At least one evaluation dimension must be scored.");
+            .WithMessage("Score at least one dimension to save.");
 
         When(x => x.Innovation.HasValue, () =>
             RuleFor(x => x.Innovation!.Value)
@@ -27,16 +27,16 @@ public class SubmitScoreValidator : AbstractValidator<SubmitScoreViewModel>
         When(x => x.TechnicalFeasibility.HasValue, () =>
             RuleFor(x => x.TechnicalFeasibility!.Value)
                 .InclusiveBetween(1, 5)
-                .WithMessage("Technical Feasibility score must be between 1 and 5."));
+                .WithMessage("Technical feasibility score must be between 1 and 5."));
 
         When(x => x.BusinessImpact.HasValue, () =>
             RuleFor(x => x.BusinessImpact!.Value)
                 .InclusiveBetween(1, 5)
-                .WithMessage("Business Impact score must be between 1 and 5."));
+                .WithMessage("Business impact score must be between 1 and 5."));
 
         When(x => x.ImplementationValue.HasValue, () =>
             RuleFor(x => x.ImplementationValue!.Value)
                 .InclusiveBetween(1, 5)
-                .WithMessage("Implementation Value score must be between 1 and 5."));
+                .WithMessage("Implementation value score must be between 1 and 5."));
     }
 }

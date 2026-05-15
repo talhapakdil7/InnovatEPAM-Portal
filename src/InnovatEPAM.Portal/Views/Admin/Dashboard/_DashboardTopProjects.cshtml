@@ -1,0 +1,134 @@
+@model AdminDashboardViewModel
+@using System.Globalization
+@{
+    var ranked = Model.Scoring.RankedScorableIdeas;
+    var inv = CultureInfo.InvariantCulture;
+    const string starPath = "M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z";
+    string StatusBadgeClass(string status) => status switch
+    {
+        "Submitted"   => "badge-submitted",
+        "UnderReview" => "badge-review",
+        "Accepted"    => "badge-accepted",
+        "Rejected"    => "badge-rejected",
+        _             => "badge-draft"
+    };
+    string StatusLabel(string st) => (st ?? "") switch
+    {
+        "UnderReview" => "In review",
+        "Submitted"   => "Submitted",
+        "Accepted"    => "Accepted",
+        "Rejected"    => "Rejected",
+        var x         => x
+    };
+}
+
+<section id="top-projects" class="scroll-mt-24 mb-8">
+    <div class="rounded-2xl border border-amber-200/80 bg-gradient-to-br from-amber-50/70 via-white to-violet-50/40 shadow-sm overflow-hidden">
+        <div class="px-5 py-4 border-b border-amber-100/80 flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h2 class="text-base font-semibold text-slate-900 flex items-center gap-2">
+                    <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-400 text-white shadow-sm shadow-amber-400/30">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                            <path d="@starPath" />
+                        </svg>
+                    </span>
+                    Highest-scoring projects
+                </h2>
+                <p class="text-xs text-slate-500 mt-1">Ranked by average score (high to low); ties favor more reviewer votes, then last updated. The list is drawn from the latest 200 ideas.</p>
+            </div>
+            <a href="@Url.Action("Index", "Admin")"
+               class="inline-flex items-center gap-1.5 rounded-xl bg-amber-400 text-white text-xs font-semibold px-3 py-2 shadow-sm hover:bg-amber-500 transition-colors">
+                View all
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+            </a>
+        </div>
+
+        <div class="p-5">
+            @if (!ranked.Any())
+            {
+                <p class="text-sm text-slate-500 rounded-xl border border-dashed border-slate-200 bg-slate-50/50 px-4 py-8 text-center">
+                    No scored projects yet.
+                </p>
+            }
+            else
+            {
+                <ul class="space-y-2" role="list">
+                    @{ var rank = 0; }
+                    @foreach (var idea in ranked)
+                    {
+                        rank++;
+                        var url = Url.Action("Detail", "Admin", new { id = idea.Id });
+                        var score = idea.AggregateScore;
+                        <li>
+                            <a href="@url"
+                               class="flex flex-col gap-3 sm:flex-row sm:items-center rounded-xl border border-slate-200/90 bg-white px-3 py-3 sm:px-4 hover:border-amber-300 hover:bg-gradient-to-r hover:from-amber-50/40 hover:to-white transition-all group shadow-[0_1px_0_rgba(15,23,42,0.04)]">
+                                <div class="flex items-start gap-3 min-w-0 flex-1">
+                                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-bold tabular-nums ring-1 ring-slate-200/80 @(rank == 1 ? "bg-amber-400 text-white ring-amber-300" : rank == 2 ? "bg-slate-200 text-slate-700 ring-slate-300" : rank == 3 ? "bg-orange-200 text-orange-800 ring-orange-300" : "bg-slate-100 text-slate-600")"
+                                         title="Rank @rank">
+                                        @rank
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <p class="text-sm font-semibold text-slate-900 truncate group-hover:text-amber-800">@idea.Title</p>
+                                        <div class="flex flex-wrap items-center gap-2 mt-1.5">
+                                            <span class="@StatusBadgeClass(idea.Status) text-[10px]">@StatusLabel(idea.Status)</span>
+                                            @if (!string.IsNullOrEmpty(idea.CategoryDisplayName))
+                                            {
+                                                <span class="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">@idea.CategoryDisplayName</span>
+                                            }
+                                            <span class="text-[10px] text-slate-500 tabular-nums">
+                                                @if (idea.ScorerCount > 0)
+                                                {
+                                                    <text>@idea.ScorerCount reviewer@(idea.ScorerCount == 1 ? "" : "s")</text>
+                                                }
+                                                else
+                                                {
+                                                    <text>No votes yet</text>
+                                                }
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex flex-wrap items-center gap-3 sm:justify-end sm:pl-2 shrink-0">
+                                    <div class="flex items-center gap-2 rounded-lg bg-slate-50 px-2.5 py-1.5 ring-1 ring-slate-100"
+                                         title="@(score.HasValue ? $"{score.Value.ToString("F1", inv)} / 5 average" : "No score yet")">
+                                        <div class="flex items-center gap-px" role="img" aria-label="@(score.HasValue ? $"{score.Value.ToString("F1", inv)} out of 5" : "No score")">
+                                            @for (var si = 1; si <= 5; si++)
+                                            {
+                                                var fill = 0d;
+                                                if (score.HasValue)
+                                                    fill = Math.Clamp((double)score.Value - (si - 1), 0, 1);
+                                                var fillPct = (fill * 100).ToString("0.##", inv);
+                                                <span class="relative h-[1.125rem] w-[1.125rem] shrink-0">
+                                                    <svg class="absolute inset-0 h-[1.125rem] w-[1.125rem] text-slate-200" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                                        <path d="@starPath" />
+                                                    </svg>
+                                                    @if (fill > 0.001)
+                                                    {
+                                                        <div class="absolute top-0 left-0 h-[1.125rem] overflow-hidden" style="width: @(fillPct)%">
+                                                            <svg class="h-[1.125rem] w-[1.125rem] text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.35)]" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                                                <path d="@starPath" />
+                                                            </svg>
+                                                        </div>
+                                                    }
+                                                </span>
+                                            }
+                                        </div>
+                                        @if (score.HasValue)
+                                        {
+                                            <span class="min-w-[2rem] text-sm font-bold text-slate-900 tabular-nums">@score.Value.ToString("F1")</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-sm font-semibold text-slate-400">—</span>
+                                        }
+                                    </div>
+                                    <svg class="hidden sm:block w-4 h-4 text-slate-300 group-hover:text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+                                </div>
+                            </a>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    </div>
+</section>

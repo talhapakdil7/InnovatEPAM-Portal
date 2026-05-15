@@ -1,0 +1,178 @@
+@model AdminDashboardViewModel
+@using System.Globalization
+@{
+    var s = Model.Scoring;
+    var inv = CultureInfo.InvariantCulture;
+    string StatusBadgeClass(string status) => status switch
+    {
+        "Submitted" => "badge-submitted",
+        "UnderReview" => "badge-review",
+        _ => "badge-draft"
+    };
+    string StatusLabel(string st) => (st ?? "").Replace("UnderReview", "In review");
+    var pctMy = s.ScorableIdeasCount == 0 ? 100 : (int)Math.Round(100.0 * s.MyScoresOnScorableCount / s.ScorableIdeasCount);
+    const string starPath = "M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z";
+}
+
+<section id="reviewer-scoring" class="scroll-mt-24 mb-8">
+    <div class="rounded-2xl border border-violet-200/90 bg-gradient-to-br from-violet-50/90 via-white to-amber-50/40 shadow-sm overflow-hidden">
+        <div class="px-5 py-4 border-b border-violet-100/80 flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h2 class="text-base font-semibold text-slate-900 flex items-center gap-2">
+                    <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-600 text-white shadow-sm shadow-violet-600/25">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                    </span>
+                    Reviewer scoring
+                </h2>
+                <p class="text-xs text-slate-600 mt-1 max-w-2xl">
+                    On ideas in <strong>Submitted</strong> or <strong>In review</strong>, you can score four dimensions (1–5). The summary is the average across all reviewers.
+                </p>
+            </div>
+            <a href="@Url.Action("Index", "Admin", new { statusFilter = "Submitted" })"
+               class="inline-flex items-center gap-1.5 rounded-xl bg-violet-600 text-white text-xs font-semibold px-3 py-2 shadow-sm hover:bg-violet-700 transition-colors">
+                Open queue
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+            </a>
+        </div>
+
+        <div class="p-5 grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="rounded-xl border border-white/80 bg-white/80 p-4 shadow-sm">
+                <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Scorable</p>
+                <p class="text-2xl font-bold text-slate-900 tabular-nums mt-1">@s.ScorableIdeasCount</p>
+                <p class="text-xs text-slate-500 mt-0.5">Queued + in review</p>
+            </div>
+            <div class="rounded-xl border border-amber-100 bg-amber-50/60 p-4 shadow-sm">
+                <p class="text-[11px] font-semibold text-amber-900/80 uppercase tracking-wider">Your score missing</p>
+                <p class="text-2xl font-bold text-amber-950 tabular-nums mt-1">@s.NeedMyScoreCount</p>
+                <p class="text-xs text-amber-800/80 mt-0.5">Complete the form on the detail page</p>
+            </div>
+            <div class="rounded-xl border border-slate-100 bg-slate-50/80 p-4 shadow-sm">
+                <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">No scores yet</p>
+                <p class="text-2xl font-bold text-slate-900 tabular-nums mt-1">@s.NoReviewerScoresYetCount</p>
+                <p class="text-xs text-slate-500 mt-0.5">Waiting for first review</p>
+            </div>
+            <div class="rounded-xl border border-emerald-100 bg-emerald-50/50 p-4 shadow-sm">
+                <p class="text-[11px] font-semibold text-emerald-800 uppercase tracking-wider">Portfolio avg.</p>
+                <p class="text-2xl font-bold text-emerald-950 tabular-nums mt-1">
+                    @(s.PortfolioAverageScore.HasValue ? s.PortfolioAverageScore.Value.ToString("F2") : "—")
+                </p>
+                <p class="text-xs text-emerald-800/80 mt-0.5">Ideas with at least one score</p>
+            </div>
+        </div>
+
+        @if (s.ScorableIdeasCount > 0)
+        {
+            <div class="px-5 pb-5">
+                <div class="rounded-xl border border-violet-100 bg-white/90 p-4">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                        <p class="text-xs font-semibold text-slate-700">Your completion (@s.MyScoresOnScorableCount / @s.ScorableIdeasCount)</p>
+                        <span class="text-xs font-bold text-violet-700 tabular-nums">%@pctMy</span>
+                    </div>
+                    <div class="h-2.5 rounded-full bg-violet-100 overflow-hidden">
+                        <div class="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all" style="width: @(pctMy)%"></div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <div class="px-5 pb-5">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                <div>
+                    <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-widest">Score ranking</h3>
+                    <p class="text-[11px] text-slate-500 mt-0.5">By average score (high → low); ties favor more reviewer votes.</p>
+                </div>
+                @if (s.ScorableIdeasCount > s.RankedScorableIdeas.Count)
+                {
+                    <a href="@Url.Action("Index", "Admin")" class="text-xs font-semibold text-violet-600 hover:text-violet-700">View all →</a>
+                }
+            </div>
+            @if (s.ScorableIdeasCount == 0)
+            {
+                <p class="text-sm text-slate-600 rounded-xl border border-dashed border-slate-200 bg-slate-50/50 px-4 py-6 text-center">
+                    No scorable ideas right now.
+                </p>
+            }
+            else
+            {
+                <ul class="space-y-2" role="list">
+                    @{ var rank = 0; }
+                    @foreach (var idea in s.RankedScorableIdeas)
+                    {
+                        rank++;
+                        var url = Url.Action("Detail", "Admin", new { id = idea.Id });
+                        var needMine = !s.MyScoredScorableIds.Contains(idea.Id);
+                        var score = idea.AggregateScore;
+                        <li>
+                            <a href="@url"
+                               class="flex flex-col gap-3 sm:flex-row sm:items-center rounded-xl border border-slate-200/90 bg-white px-3 py-3 sm:px-4 hover:border-violet-300 hover:bg-gradient-to-r hover:from-violet-50/40 hover:to-white transition-all group shadow-[0_1px_0_rgba(15,23,42,0.04)]">
+                                <div class="flex items-start gap-3 min-w-0 flex-1">
+                                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-bold tabular-nums ring-1 ring-slate-200/80 @(rank <= 3 ? "bg-violet-100 text-violet-800 ring-violet-200" : "bg-slate-100 text-slate-600")" title="Rank @rank">
+                                        @rank
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <p class="text-sm font-semibold text-slate-900 truncate group-hover:text-violet-900">@idea.Title</p>
+                                        <div class="flex flex-wrap items-center gap-2 mt-1.5">
+                                            <span class="@StatusBadgeClass(idea.Status) text-[10px]">@StatusLabel(idea.Status)</span>
+                                            @if (needMine)
+                                            {
+                                                <span class="rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-900">Your score missing</span>
+                                            }
+                                            <span class="text-[10px] text-slate-500 tabular-nums">
+                                                @if (idea.ScorerCount > 0)
+                                                {
+                                                    <text>@idea.ScorerCount reviewer @(idea.ScorerCount == 1 ? "vote" : "votes")</text>
+                                                }
+                                                else
+                                                {
+                                                    <text>No votes yet</text>
+                                                }
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex flex-wrap items-center gap-3 sm:justify-end sm:pl-2 shrink-0">
+                                    <div class="flex items-center gap-2 rounded-lg bg-slate-50 px-2.5 py-1.5 ring-1 ring-slate-100"
+                                         title="@(score.HasValue ? $"{score.Value.ToString("F1", inv)} / 5 average" : "No average yet")">
+                                        <div class="flex items-center gap-px" role="img" aria-label="@(score.HasValue ? $"{score.Value.ToString("F1", inv)} out of 5" : "No score")">
+                                            @for (var si = 1; si <= 5; si++)
+                                            {
+                                                var fill = 0d;
+                                                if (score.HasValue)
+                                                    fill = Math.Clamp((double)score.Value - (si - 1), 0, 1);
+                                                var fillPct = (fill * 100).ToString("0.##", inv);
+                                                <span class="relative h-[1.125rem] w-[1.125rem] shrink-0">
+                                                    <svg class="absolute inset-0 h-[1.125rem] w-[1.125rem] text-slate-200" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                                        <path d="@starPath" />
+                                                    </svg>
+                                                    @if (fill > 0.001)
+                                                    {
+                                                        <div class="absolute top-0 left-0 h-[1.125rem] overflow-hidden" style="width: @(fillPct)%">
+                                                            <svg class="h-[1.125rem] w-[1.125rem] text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.35)]" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                                                <path d="@starPath" />
+                                                            </svg>
+                                                        </div>
+                                                    }
+                                                </span>
+                                            }
+                                        </div>
+                                        @if (score.HasValue)
+                                        {
+                                            <span class="min-w-[2rem] text-sm font-bold text-slate-900 tabular-nums">@score.Value.ToString("F1")</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-sm font-semibold text-slate-400">—</span>
+                                        }
+                                    </div>
+                                    <svg class="hidden sm:block w-4 h-4 text-slate-300 group-hover:text-violet-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+                                </div>
+                            </a>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    </div>
+</section>

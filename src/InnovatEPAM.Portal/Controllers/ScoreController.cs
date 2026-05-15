@@ -1,5 +1,6 @@
 using InnovatEPAM.Portal.Models;
 using InnovatEPAM.Portal.Services.Interfaces;
+using InnovatEPAM.Portal.Utilities;
 using InnovatEPAM.Portal.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -28,11 +29,11 @@ public class ScoreController : Controller
     /// Redirects back to the admin detail page on success or validation failure.
     /// </summary>
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> Submit(SubmitScoreViewModel vm)
+    public async Task<IActionResult> Submit([Bind(Prefix = "ScoreForm")] SubmitScoreViewModel vm)
     {
         if (!ModelState.IsValid)
         {
-            TempData["Error"] = "Please correct the validation errors before saving your score.";
+            this.AddModelErrorsToTempData();
             return RedirectToAction("Detail", "Admin", new { id = vm.IdeaId });
         }
 
@@ -41,7 +42,7 @@ public class ScoreController : Controller
         try
         {
             await _scoreService.SubmitScoreAsync(vm.IdeaId, adminId, vm);
-            TempData["Success"] = "Your score has been saved.";
+            TempData["Success"] = "Your score was saved.";
         }
         catch (InvalidOperationException ex)
         {
@@ -60,7 +61,7 @@ public class ScoreController : Controller
     {
         var adminId = Guid.Parse(_userManager.GetUserId(User)!);
         await _scoreService.RetractScoreAsync(ideaId, adminId);
-        TempData["Success"] = "Your score has been removed.";
+        TempData["Success"] = "Your score was removed.";
         return RedirectToAction("Detail", "Admin", new { id = ideaId });
     }
 }

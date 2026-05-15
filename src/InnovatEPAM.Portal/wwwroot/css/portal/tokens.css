@@ -1,0 +1,57 @@
+/* InnovatEPAM Portal — design tokens & Bootstrap overrides (Bootstrap 5.3+) */
+:root {
+  --portal-primary: #4f46e5;
+  --portal-primary-hover: #4338ca;
+  --portal-secondary: #6366f1;
+  --portal-success: #10b981;
+  --portal-danger: #ef4444;
+  --portal-warning: #f59e0b;
+  --portal-info: #0ea5e9;
+
+  --portal-text-strong: #0f172a;
+  --portal-text-muted: #64748b;
+  --portal-surface-base: #f8fafc;
+  --portal-surface-elevated: #ffffff;
+  --portal-border: rgba(15, 23, 42, 0.08);
+  --portal-border-strong: rgba(15, 23, 42, 0.12);
+
+  --portal-sidebar-w: 17.5rem;
+  --portal-sidebar-w-collapsed: 4.5rem;
+  --portal-topnav-h: 4rem;
+
+  --portal-radius-xs: 0.375rem;
+  --portal-radius-sm: 0.5rem;
+  --portal-radius-md: 0.75rem;
+  --portal-radius-lg: 1rem;
+  --portal-radius-xl: 1.25rem;
+
+  --portal-shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --portal-shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --portal-shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.04);
+  --portal-shadow-lg: 0 18px 50px rgba(15, 23, 42, 0.1), 0 6px 16px rgba(15, 23, 42, 0.06);
+
+  --portal-blur-card: saturate(140%) blur(12px);
+
+  --bs-primary: var(--portal-primary);
+  --bs-primary-rgb: 79, 70, 229;
+  --bs-secondary: #64748b;
+  --bs-secondary-rgb: 100, 116, 139;
+  --bs-success: var(--portal-success);
+  --bs-danger: var(--portal-danger);
+  --bs-warning: var(--portal-warning);
+  --bs-info: var(--portal-info);
+
+  --bs-body-bg: var(--portal-surface-base);
+  --bs-body-color: var(--portal-text-strong);
+  --bs-border-radius: var(--portal-radius-md);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

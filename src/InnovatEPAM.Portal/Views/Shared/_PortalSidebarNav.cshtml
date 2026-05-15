@@ -1,0 +1,62 @@
+@{
+    var c = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+    var a = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+    bool actIdeasIndex = string.Equals(c, "Ideas", StringComparison.OrdinalIgnoreCase)
+                         && string.Equals(a, "Index", StringComparison.OrdinalIgnoreCase);
+    bool actIdeasCreate = string.Equals(c, "Ideas", StringComparison.OrdinalIgnoreCase)
+                          && string.Equals(a, "Create", StringComparison.OrdinalIgnoreCase);
+
+    bool actAdminHub = string.Equals(c, "Admin", StringComparison.OrdinalIgnoreCase)
+                       && string.Equals(a, "Index", StringComparison.OrdinalIgnoreCase);
+    bool actAdminDetail = string.Equals(c, "Admin", StringComparison.OrdinalIgnoreCase)
+                          && string.Equals(a, "Detail", StringComparison.OrdinalIgnoreCase);
+
+    bool actSettingsBlind = string.Equals(c, "Settings", StringComparison.OrdinalIgnoreCase);
+
+    bool isAdmin = User.IsInRole("Admin");
+}
+
+<div class="portal-sidebar-brand">
+    <div class="portal-brand-mark"><i class="bi bi-lightning-charge-fill"></i></div>
+    <div class="portal-brand-text-wrap">
+        <span class="d-block lh-sm portal-auth-brand small">InnovatEPAM</span>
+    <span class="portal-nav-label portal-input-hint small d-block lh-sm mt-1 opacity-75">
+            Idea intelligence hub
+        </span>
+    </div>
+</div>
+
+<nav aria-label="Main">
+    <div class="portal-nav-heading">Overview</div>
+    <a class="portal-nav-link @(actIdeasIndex ? "is-active" : "")" asp-controller="Ideas" asp-action="Index">
+        <i class="bi bi-kanban"></i>
+        <span class="portal-nav-label">My Ideas</span>
+    </a>
+    <a class="portal-nav-link @(actIdeasCreate ? "is-active" : "")" asp-controller="Ideas" asp-action="Create">
+        <i class="bi bi-plus-circle-dotted"></i>
+        <span class="portal-nav-label">Submit Idea</span>
+    </a>
+
+    @if (isAdmin)
+    {
+        <div class="portal-nav-heading portal-nav-ad">Moderation</div>
+        <a class="portal-nav-link @(actAdminHub || actAdminDetail ? "is-active" : "")" asp-controller="Admin" asp-action="Index">
+            <i class="bi bi-passport-check"></i>
+            <span class="portal-nav-label">Review queue</span>
+        </a>
+
+        <div class="portal-nav-heading">Platform</div>
+        <a class="portal-nav-link @(actSettingsBlind ? "is-active" : "")" asp-controller="Settings" asp-action="BlindReview">
+            <i class="bi bi-eye-slash"></i>
+            <span class="portal-nav-label">Blind review</span>
+        </a>
+    }
+</nav>
+
+<div class="portal-sidebar-footer text-muted portal-sidebar-footer-text">
+    <div class="d-flex gap-3 flex-wrap lh-sm">
+        <a asp-controller="Home" asp-action="Privacy" class="link-secondary text-decoration-none">Privacy</a>
+        <span class="opacity-25">•</span>
+        <small>© @DateTime.Now.Year InnovatEPAM Portal</small>
+    </div>
+</div>

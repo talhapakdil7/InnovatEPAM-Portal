@@ -1,0 +1,89 @@
+@model AdminDashboardViewModel
+@{
+    double P(int n) => Model.TotalIdeas == 0 ? 0 : 100.0 * n / Model.TotalIdeas;
+}
+
+<section id="analytics" class="scroll-mt-24 mb-8 rounded-2xl border border-slate-200/90 bg-white shadow-sm overflow-hidden">
+    <div class="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+        <div>
+            <h2 class="text-base font-semibold text-slate-900">Pipeline summary</h2>
+            <p class="text-xs text-slate-500 mt-0.5">Each status once — segment sizes are shares of the full portfolio.</p>
+        </div>
+        <a href="@Url.Action("Index", "Admin")" class="text-xs font-semibold text-blue-600 hover:text-blue-700">All submissions →</a>
+    </div>
+
+    <div class="p-5 space-y-5">
+        <!-- Status count pills -->
+        <div class="flex flex-wrap gap-3">
+            <span class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
+                <span class="text-slate-500">Total</span>
+                <span class="font-bold tabular-nums text-slate-900">@Model.TotalIdeas</span>
+            </span>
+            <span class="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50/80 px-3 py-2 text-sm">
+                <span class="text-blue-800">Submitted</span>
+                <span class="font-bold tabular-nums text-blue-900">@Model.SubmittedCount</span>
+            </span>
+            <span class="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50/80 px-3 py-2 text-sm">
+                <span class="text-amber-900">Under review</span>
+                <span class="font-bold tabular-nums text-amber-950">@Model.UnderReviewCount</span>
+            </span>
+            <span class="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50/80 px-3 py-2 text-sm">
+                <span class="text-emerald-800">Accepted</span>
+                <span class="font-bold tabular-nums text-emerald-900">@Model.AcceptedCount</span>
+            </span>
+            <span class="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50/80 px-3 py-2 text-sm">
+                <span class="text-red-800">Rejected</span>
+                <span class="font-bold tabular-nums text-red-900">@Model.RejectedCount</span>
+            </span>
+            <span class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm">
+                <span class="text-slate-500">Decided</span>
+                <span class="font-bold tabular-nums text-slate-800">@Model.PipelineThroughput</span>
+            </span>
+        </div>
+
+        @if (Model.TotalIdeas > 0)
+        {
+            <div>
+                <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Status mix</p>
+                <div class="flex h-3 rounded-full overflow-hidden bg-slate-100 ring-1 ring-slate-200/80">
+                    @if (Model.SubmittedCount > 0)
+                    {
+                        <div class="bg-blue-500 h-full" style="width: @(P(Model.SubmittedCount).ToString("F2", System.Globalization.CultureInfo.InvariantCulture))%" title="Submitted"></div>
+                    }
+                    @if (Model.UnderReviewCount > 0)
+                    {
+                        <div class="bg-amber-400 h-full" style="width: @(P(Model.UnderReviewCount).ToString("F2", System.Globalization.CultureInfo.InvariantCulture))%" title="Under review"></div>
+                    }
+                    @if (Model.AcceptedCount > 0)
+                    {
+                        <div class="bg-emerald-500 h-full" style="width: @(P(Model.AcceptedCount).ToString("F2", System.Globalization.CultureInfo.InvariantCulture))%" title="Accepted"></div>
+                    }
+                    @if (Model.RejectedCount > 0)
+                    {
+                        <div class="bg-red-500 h-full" style="width: @(P(Model.RejectedCount).ToString("F2", System.Globalization.CultureInfo.InvariantCulture))%" title="Rejected"></div>
+                    }
+                </div>
+            </div>
+        }
+
+        <div>
+            <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Category (top @Math.Min(8, Model.IdeasByCategory.Count))</p>
+            @if (!Model.IdeasByCategory.Any())
+            {
+                <p class="text-sm text-slate-500">No category data.</p>
+            }
+            else
+            {
+                <div class="flex flex-wrap gap-2">
+                    @foreach (var row in Model.IdeasByCategory.Take(8))
+                    {
+                        <span class="inline-flex items-center gap-1.5 rounded-lg bg-indigo-50 border border-indigo-100 px-2.5 py-1 text-xs text-indigo-900">
+                            <span class="truncate max-w-[10rem]" title="@row.DisplayName">@row.DisplayName</span>
+                            <span class="font-bold tabular-nums">@row.Count</span>
+                        </span>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</section>

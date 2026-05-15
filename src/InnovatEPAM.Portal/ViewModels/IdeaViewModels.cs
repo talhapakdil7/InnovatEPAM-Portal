@@ -5,9 +5,18 @@ namespace InnovatEPAM.Portal.ViewModels;
 
 public class IdeaListViewModel
 {
+    /// <summary>Submitted / in-review / decided ideas (never drafts). Filtered by <see cref="StatusFilter"/>.</summary>
     public List<IdeaListItemDTO> Ideas { get; set; } = new();
+
+    /// <summary>All draft ideas for this user, always shown in the drafts section.</summary>
+    public List<IdeaListItemDTO> DraftIdeas { get; set; } = new();
+
+    /// <summary>Pipeline-only filter (Submitted, UnderReview, …). Never <c>Draft</c>.</summary>
     public string? StatusFilter { get; set; }
     public List<string> AvailableStatuses { get; set; } = new();
+
+    /// <summary>Per-status counts for the submitter’s full portfolio (unfiltered). Keys match <see cref="Models.IdeaStatus"/> names.</summary>
+    public Dictionary<string, int> StatusCounts { get; set; } = new();
 }
 
 public class IdeaDetailViewModel
@@ -58,6 +67,8 @@ public class CreateIdeaViewModel
 public class AdminIdeaListViewModel
 {
     public List<IdeaListItemDTO> Ideas { get; set; } = new();
+    /// <summary>Full-text filter on title/description (admin queue search).</summary>
+    public string? SearchQuery { get; set; }
     public string? StatusFilter { get; set; }
     public List<string> AvailableStatuses { get; set; } = new();
     public Dictionary<string, int> StatusSummary { get; set; } = new();
@@ -75,7 +86,11 @@ public class AdminIdeaListViewModel
 public class AdminIdeaDetailViewModel
 {
     public IdeaDetailDTO Idea { get; set; } = null!;
+    /// <summary>Statuses shown in the lifecycle dropdown — only triage vs in-flight.</summary>
     public List<string> AllowedStatuses { get; set; } = new();
+
+    /// <summary>False when Accepted/Rejected — use Record final decision, not manual status.</summary>
+    public bool CanManualLifecycleEdit { get; set; }
 
     /// <summary>True when blind review mode is globally active; drives the info banner in the view.</summary>
     public bool IsBlindReviewActive { get; set; }
@@ -162,4 +177,7 @@ public class EditDraftViewModel
 
     /// <summary>Expected business impact of the client solution.</summary>
     public string? ClientImpact { get; set; }
+
+    /// <summary>When true, the form edits a submitted idea (pre-review window) instead of a draft.</summary>
+    public bool IsSubmittedEditable { get; set; }
 }

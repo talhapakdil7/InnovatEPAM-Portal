@@ -1,414 +1,424 @@
 @using InnovatEPAM.Portal.Models
 @model AdminIdeaDetailViewModel
+@functions {
+    private static bool CanInlinePreview(string? fileName)
+    {
+        if (string.IsNullOrEmpty(fileName)) return false;
+        var ext = System.IO.Path.GetExtension(fileName).ToLowerInvariant();
+        return ext is ".pdf" or ".png" or ".jpg" or ".jpeg" or ".gif" or ".webp";
+    }
+}
 @{
     ViewData["Title"] = $"Review — {Model.Idea.Title}";
-    var badgeClass = Model.Idea.Status switch
+    ViewData["BreadcrumbParent"] = "Review Queue";
+    ViewData["BreadcrumbParentUrl"] = Url.Action("Index", "Admin");
+
+    string StatusBadgeClass(string status) => status switch
     {
-        "Submitted" => "bg-secondary",
-        "UnderReview" => "bg-warning text-dark",
-        "Accepted" => "bg-success",
-        "Rejected" => "bg-danger",
-        _ => "bg-secondary"
+        "Draft"       => "badge-draft",
+        "Submitted"   => "badge-submitted",
+        "UnderReview" => "badge-review",
+        "Accepted"    => "badge-accepted",
+        "Rejected"    => "badge-rejected",
+        _ => "badge-draft"
     };
+    string StatusLabel(string s) => s?.Replace("UnderReview", "Under Review") ?? "";
+
     var isUnderReview = Model.Idea.Status == "UnderReview";
-    var canAdvance = isUnderReview && Model.Idea.CurrentReviewStageOrder < 4;
-    var canRevert = isUnderReview && Model.Idea.CurrentReviewStageOrder > 1;
-    var canDecide = isUnderReview && Model.Idea.IsAtFinalStage;
+    var showWorkflowPanel = Model.Idea.Status == "Submitted" || isUnderReview;
+    var historyCount  = Model.Idea.AuditHistory.Count;
 }
 
+<!-- Blind Review Banner -->
 @if (Model.IsBlindReviewActive)
 {
-    <div class="alert alert-info d-flex align-items-center mb-3" role="alert">
-        <i class="bi bi-eye-slash-fill me-2 fs-5"></i>
-        <div>
-            <strong>Blind review is active</strong> — submitter identity is hidden during evaluation.
-            @if (Model.Idea.Status == "Accepted" || Model.Idea.Status == "Rejected")
-            {
-                <span class="badge bg-success ms-2">
-                    <i class="bi bi-eye me-1"></i>Identity visible — evaluation concluded
-                </span>
-            }
-            else
-            {
-                <a asp-controller="Settings" asp-action="BlindReview" class="alert-link ms-2">Manage Settings</a>
-            }
-        </div>
+    <div class="alert-info mt-4 mb-4">
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+        </svg>
+        <span><strong>Blind review is active</strong> — submitter identity is hidden during evaluation.</span>
+        @if (Model.Idea.Status is "Accepted" or "Rejected")
+        {
+            <span class="badge-accepted ml-2">Identity visible — evaluation concluded</span>
+        }
+        else
+        {
+            <a href="@Url.Action("BlindReview", "Settings")" class="ml-auto text-blue-700 text-xs font-semibold hover:underline whitespace-nowrap">Manage</a>
+        }
     </div>
 }
 
-<div class="d-flex align-items-center mb-3">
-    <a asp-action="Index" class="btn btn-sm btn-outline-secondary me-3"><i class="bi bi-arrow-left"></i></a>
-    <h2 class="mb-0 text-truncate">@Model.Idea.Title</h2>
-    <span class="badge @badgeClass ms-3">@Model.Idea.Status.Replace("UnderReview", "Under Review")</span>
+<!-- Header -->
+<div class="mt-2 mb-6">
+    <div class="flex items-center gap-2 mb-3 flex-wrap">
+        <a asp-action="Index" class="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors flex-shrink-0"
+           title="Back to Review Queue">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+        </a>
+        <span class="@StatusBadgeClass(Model.Idea.Status)">@StatusLabel(Model.Idea.Status)</span>
+        @if (Model.Idea.CategoryDisplayName != null)
+        {
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
+                @Model.Idea.CategoryDisplayName
+            </span>
+        }
+        @if (Model.Idea.Attachments.Count > 0)
+        {
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200" title="Has attachments">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                </svg>
+                @Model.Idea.Attachments.Count file@(Model.Idea.Attachments.Count == 1 ? "" : "s")
+            </span>
+        }
+    </div>
+    <h1 class="text-2xl font-bold text-slate-900 leading-snug tracking-tight">@Model.Idea.Title</h1>
+    <p class="text-sm text-slate-500 mt-2 flex flex-wrap gap-x-3 gap-y-1">
+        <span>Submitter: <span class="font-medium text-slate-800">@Model.Idea.SubmitterName</span></span>
+        <span class="text-slate-300 hidden sm:inline">|</span>
+        <span>Submitted <span class="font-medium text-slate-700">@Model.Idea.CreatedDate.ToString("MMMM dd, yyyy HH:mm")</span> (UTC)</span>
+        <span class="text-slate-300 hidden sm:inline">|</span>
+        <span class="font-mono text-xs text-slate-400">ID @Model.Idea.Id</span>
+    </p>
 </div>
 
-<div class="row g-4">
-    <div class="col-lg-8">
+@if (false) { /* removed: lastStage workflow notes panel */ }
 
-        @* ── Evaluation Scoring Section ── *@
-        <div class="card shadow-sm mb-3">
-            <div class="card-header d-flex align-items-center gap-2">
-                <i class="bi bi-star-fill text-warning"></i>
-                <h6 class="mb-0">Evaluation Scores</h6>
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+
+    <!-- Main column: full submission context -->
+    <div class="xl:col-span-8 space-y-5">
+
+        <section class="card p-6 border-l-4 border-blue-500" id="submission">
+            <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3">Idea narrative</h2>
+            @if (!string.IsNullOrWhiteSpace(Model.Idea.Description))
+            {
+                <div class="text-slate-800 leading-relaxed whitespace-pre-wrap text-sm max-w-none">@Model.Idea.Description</div>
+            }
+            else
+            {
+                <p class="text-slate-400 italic text-sm">No narrative description was provided.</p>
+            }
+        </section>
+
+        @if (Model.Idea.CategoryDataFields?.Any() == true)
+        {
+            <section class="card p-6">
+                <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                    </svg>
+                    @(Model.Idea.CategoryDisplayName ?? "Category") — structured responses
+                </h2>
+                <dl class="divide-y divide-slate-100 border border-slate-100 rounded-xl overflow-hidden">
+                    @foreach (var field in Model.Idea.CategoryDataFields)
+                    {
+                        <div class="px-4 py-3 grid sm:grid-cols-3 gap-2 bg-white">
+                            <dt class="text-sm font-medium text-slate-500">@field.Key</dt>
+                            <dd class="text-sm text-slate-900 sm:col-span-2 whitespace-pre-wrap">@field.Value</dd>
+                        </div>
+                    }
+                </dl>
+            </section>
+        }
+
+        <section class="card p-6" id="attachments">
+            <div class="flex items-center justify-between gap-3 mb-4">
+                <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-widest">Attachments</h2>
+                @if (Model.Idea.Attachments.Any())
+                {
+                    <span class="text-xs text-slate-400">@Model.Idea.Attachments.Count file(s) · review before deciding</span>
+                }
             </div>
-            <div class="card-body">
-                @if (TempData["Success"] != null)
-                {
-                    <div class="alert alert-success py-2 mb-3"><i class="bi bi-check-circle me-1"></i>@TempData["Success"]</div>
-                }
-                @if (TempData["Error"] != null)
-                {
-                    <div class="alert alert-danger py-2 mb-3"><i class="bi bi-exclamation-triangle me-1"></i>@TempData["Error"]</div>
-                }
+            @if (!Model.Idea.Attachments.Any())
+            {
+                <p class="text-sm text-slate-400 italic">No files attached to this submission.</p>
+            }
+            else
+            {
+                <ul class="space-y-3">
+                    @foreach (var att in Model.Idea.Attachments)
+                    {
+                        var prev = CanInlinePreview(att.FileName);
+                        <li class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-3 px-4 bg-slate-50 rounded-xl border border-slate-200">
+                            <div class="flex items-start gap-3 min-w-0">
+                                <div class="w-10 h-10 rounded-lg bg-white border border-slate-200 flex items-center justify-center flex-shrink-0 text-slate-500">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                    </svg>
+                                </div>
+                                <div class="min-w-0">
+                                    <p class="text-sm font-semibold text-slate-900 truncate" title="@att.FileName">@att.FileName</p>
+                                    <p class="text-xs text-slate-400">@((att.FileSize / 1024.0).ToString("N0")) KB · uploaded @att.UploadedDate.ToString("MMM dd, yyyy")</p>
+                                </div>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                @if (prev)
+                                {
+                                    <a asp-controller="Ideas" asp-action="Download" asp-route-attachmentId="@att.Id" asp-route-preview="true"
+                                       target="_blank" rel="noopener"
+                                       class="btn-primary btn-sm inline-flex items-center gap-1.5">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                        </svg>
+                                        Preview
+                                    </a>
+                                }
+                                <a asp-controller="Ideas" asp-action="Download" asp-route-attachmentId="@att.Id"
+                                   class="btn-ghost btn-sm inline-flex items-center gap-1.5 text-blue-700 hover:bg-blue-50 border border-slate-200">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                    </svg>
+                                    Download
+                                </a>
+                            </div>
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
 
+        <section class="card overflow-hidden" id="evaluation">
+            <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-amber-50/30">
+                <div class="flex items-center gap-2">
+                    <svg class="w-4 h-4 text-amber-500 fill-current" viewBox="0 0 20 20">
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                    <h2 class="text-sm font-semibold text-slate-900">Reviewer scoring</h2>
+                </div>
+                @if (Model.IsScoringAllowed)
+                {
+                    <span class="text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">Open for scoring</span>
+                }
+                else
+                {
+                    <span class="text-xs text-slate-500">Scoring closed</span>
+                }
+            </div>
+            <div class="p-5 space-y-6">
                 @if (Model.IsScoringAllowed)
                 {
                     <form asp-controller="Score" asp-action="Submit" method="post">
                         @Html.AntiForgeryToken()
                         <input type="hidden" asp-for="ScoreForm.IdeaId" />
-                        <div class="row g-2 mb-3">
-                            @foreach (var dim in new[] {
+                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                            @foreach (var (label, name, val) in new[] {
                                 ("Innovation", "ScoreForm.Innovation", Model.ScoreForm.Innovation),
-                                ("Technical Feasibility", "ScoreForm.TechnicalFeasibility", Model.ScoreForm.TechnicalFeasibility),
+                                ("Tech Feasibility", "ScoreForm.TechnicalFeasibility", Model.ScoreForm.TechnicalFeasibility),
                                 ("Business Impact", "ScoreForm.BusinessImpact", Model.ScoreForm.BusinessImpact),
-                                ("Implementation Value", "ScoreForm.ImplementationValue", Model.ScoreForm.ImplementationValue)
+                                ("Impl. Value", "ScoreForm.ImplementationValue", Model.ScoreForm.ImplementationValue)
                             })
                             {
-                                <div class="col-sm-6 col-md-3">
-                                    <label class="form-label small fw-semibold">@dim.Item1</label>
-                                    <select name="@dim.Item2" class="form-select form-select-sm">
-                                        <option value="">— Not scored —</option>
+                                <div>
+                                    <label class="form-label text-xs">@label</label>
+                                    <select name="@name" class="form-select text-sm">
+                                        <option value="">—</option>
                                         @for (int i = 1; i <= 5; i++)
                                         {
-                                            <option value="@i" selected="@(dim.Item3 == i)">@i ★</option>
+                                            <option value="@i" selected="@(val == i)">@i ★</option>
                                         }
                                     </select>
                                 </div>
                             }
                         </div>
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-sm btn-warning fw-semibold">
-                                <i class="bi bi-star me-1"></i>Save Score
-                            </button>
-                            @if (Model.ScoreForm.Innovation.HasValue || Model.ScoreForm.TechnicalFeasibility.HasValue
-                              || Model.ScoreForm.BusinessImpact.HasValue || Model.ScoreForm.ImplementationValue.HasValue)
-                            {
-                                <form asp-controller="Score" asp-action="Retract" asp-route-ideaId="@Model.Idea.Id" method="post" class="d-inline">
-                                    @Html.AntiForgeryToken()
-                                    <button type="submit" class="btn btn-sm btn-outline-danger"
-                                            onclick="return confirm('Remove your score for this idea?')">
-                                        <i class="bi bi-x-circle me-1"></i>Remove My Score
-                                    </button>
-                                </form>
-                            }
+                        <div class="flex flex-wrap gap-2">
+                            <button type="submit" class="btn-primary btn-sm">Save your score</button>
                         </div>
                     </form>
-                }
-                else if (Model.Idea.Status == "Accepted" || Model.Idea.Status == "Rejected")
-                {
-                    <div class="alert alert-secondary py-2 mb-3">
-                        <i class="bi bi-lock me-1"></i><strong>Scoring closed</strong> — this idea has been decided.
-                    </div>
-                }
-
-                @* Score summary — always shown when scores exist *@
-                @if (Model.ScoreSummary != null && Model.ScoreSummary.ScorerCount > 0)
-                {
-                    <hr />
-                    <div class="d-flex align-items-center gap-2 mb-2">
-                        <span class="badge bg-warning text-dark fs-6">@Model.ScoreSummary.OverallAverage?.ToString("F2") / 5</span>
-                        <small class="text-muted">(@Model.ScoreSummary.ScorerCount reviewer(s))</small>
-                    </div>
-                    <table class="table table-sm table-bordered mb-2">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Dimension</th>
-                                <th>Average</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr><td>Innovation</td><td>@(Model.ScoreSummary.AvgInnovation?.ToString("F2") ?? "—")</td></tr>
-                            <tr><td>Technical Feasibility</td><td>@(Model.ScoreSummary.AvgTechnicalFeasibility?.ToString("F2") ?? "—")</td></tr>
-                            <tr><td>Business Impact</td><td>@(Model.ScoreSummary.AvgBusinessImpact?.ToString("F2") ?? "—")</td></tr>
-                            <tr><td>Implementation Value</td><td>@(Model.ScoreSummary.AvgImplementationValue?.ToString("F2") ?? "—")</td></tr>
-                        </tbody>
-                    </table>
-                    @if (Model.ScoreSummary.AdminScores.Count > 0)
+                    @if (Model.ScoreForm.Innovation.HasValue || Model.ScoreForm.TechnicalFeasibility.HasValue
+                      || Model.ScoreForm.BusinessImpact.HasValue || Model.ScoreForm.ImplementationValue.HasValue)
                     {
-                        <details>
-                            <summary class="small text-muted mb-1" style="cursor:pointer">Reviewer breakdown</summary>
-                            <table class="table table-sm table-hover mt-1">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Reviewer</th>
-                                        <th>Innov.</th>
-                                        <th>Tech. Feas.</th>
-                                        <th>Bus. Impact</th>
-                                        <th>Impl. Value</th>
-                                        <th>Row Avg</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var row in Model.ScoreSummary.AdminScores)
-                                    {
-                                        <tr>
-                                            <td>@row.AdminName</td>
-                                            <td>@(row.Innovation?.ToString() ?? "—")</td>
-                                            <td>@(row.TechnicalFeasibility?.ToString() ?? "—")</td>
-                                            <td>@(row.BusinessImpact?.ToString() ?? "—")</td>
-                                            <td>@(row.ImplementationValue?.ToString() ?? "—")</td>
-                                            <td>@(row.RowAverage?.ToString("F2") ?? "—")</td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </details>
+                        <form asp-controller="Score" asp-action="Retract" asp-route-ideaId="@Model.Idea.Id" method="post" class="pt-2 border-t border-dashed border-slate-200">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn-ghost btn-sm text-red-600 hover:bg-red-50"
+                                    onclick="return confirm('Remove your score for this idea?')">
+                                Remove my score
+                            </button>
+                        </form>
                     }
                 }
                 else
                 {
-                    <div class="alert alert-light py-2 text-muted mb-0">
-                        <i class="bi bi-star me-1"></i>No scores yet for this idea.
-                    </div>
+                    <p class="text-sm text-slate-500 italic">Scoring is closed — this idea is no longer accepting evaluations.</p>
                 }
-            </div>
-        </div>
 
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h5 class="card-title">Description</h5>
-                @if (!string.IsNullOrWhiteSpace(Model.Idea.Description))
+                @if (Model.ScoreSummary != null && Model.ScoreSummary.ScorerCount > 0)
                 {
-                    <p>@Model.Idea.Description</p>
+                    <div class="pt-5 border-t border-slate-100">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-sm font-semibold text-slate-900">Team aggregate</h3>
+                            <span class="text-xs text-slate-400">@Model.ScoreSummary.ScorerCount reviewer(s)</span>
+                        </div>
+                        <div class="flex items-center gap-5 mb-5">
+                            <span class="text-4xl font-bold text-slate-900 tabular-nums">@Model.ScoreSummary.OverallAverage?.ToString("F2")</span>
+                            <span class="text-xs text-slate-400">/ 5 overall</span>
+                        </div>
+                        <div class="space-y-2.5 mb-4">
+                            @foreach (var (label, value) in new[] {
+                                ("Innovation", Model.ScoreSummary.AvgInnovation),
+                                ("Technical Feasibility", Model.ScoreSummary.AvgTechnicalFeasibility),
+                                ("Business Impact", Model.ScoreSummary.AvgBusinessImpact),
+                                ("Implementation Value", Model.ScoreSummary.AvgImplementationValue)
+                            })
+                            {
+                                <div class="flex items-center gap-3">
+                                    <span class="text-sm text-slate-600 w-40 flex-shrink-0">@label</span>
+                                    @if (value.HasValue)
+                                    {
+                                        <div class="flex-1 bg-slate-100 rounded-full h-1.5">
+                                            <div class="bg-amber-400 h-1.5 rounded-full transition-all" style="width: @((value.Value / 5 * 100).ToString("F0"))%"></div>
+                                        </div>
+                                        <span class="text-sm font-semibold text-slate-700 w-8 text-right tabular-nums">@value.Value.ToString("F1")</span>
+                                    }
+                                    else
+                                    {
+                                        <div class="flex-1 bg-slate-100 rounded-full h-1.5"></div>
+                                        <span class="text-sm text-slate-300 w-8 text-right">—</span>
+                                    }
+                                </div>
+                            }
+                        </div>
+                        @if (Model.ScoreSummary.AdminScores.Count > 0)
+                        {
+                            <details class="mt-2">
+                                <summary class="text-xs font-medium text-blue-600 cursor-pointer hover:text-blue-700">Per-reviewer breakdown</summary>
+                                <div class="mt-3 overflow-x-auto">
+                                    <table class="data-table text-xs">
+                                        <thead>
+                                            <tr>
+                                                <th>Reviewer</th>
+                                                <th>Innov.</th>
+                                                <th>Tech.</th>
+                                                <th>Bus.</th>
+                                                <th>Impl.</th>
+                                                <th>Avg</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var row in Model.ScoreSummary.AdminScores)
+                                            {
+                                                <tr>
+                                                    <td class="font-medium">@row.AdminName</td>
+                                                    <td>@(row.Innovation?.ToString() ?? "—")</td>
+                                                    <td>@(row.TechnicalFeasibility?.ToString() ?? "—")</td>
+                                                    <td>@(row.BusinessImpact?.ToString() ?? "—")</td>
+                                                    <td>@(row.ImplementationValue?.ToString() ?? "—")</td>
+                                                    <td class="font-semibold text-amber-600">@(row.RowAverage?.ToString("F1") ?? "—")</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </details>
+                        }
+                    </div>
                 }
                 else
                 {
-                    <p class="text-muted fst-italic">No description provided.</p>
+                    <p class="text-sm text-slate-400 pt-2">No aggregate scores recorded yet for this idea.</p>
                 }
             </div>
-        </div>
+        </section>
 
-        @if (Model.Idea.Attachments.Any())
-        {
-            <div class="card shadow-sm mt-3">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-paperclip me-1"></i>Attachments</h5>
-                    <ul class="list-group list-group-flush">
-                        @foreach (var att in Model.Idea.Attachments)
+        <section class="space-y-5" id="history">
+            @if (Model.Idea.AuditHistory.Any())
+            {
+                <div class="card p-5">
+                    <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">Status audit (@Model.Idea.AuditHistory.Count)</h2>
+                    <ul class="space-y-3">
+                        @foreach (var log in Model.Idea.AuditHistory)
                         {
-                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                <span><i class="bi bi-file-earmark me-2 text-muted"></i>@att.FileName</span>
-                                <div class="d-flex align-items-center gap-2">
-                                    <small class="text-muted">@((att.FileSize / 1024.0).ToString("F0")) KB</small>
-                                    <a asp-controller="Ideas" asp-action="Download" asp-route-attachmentId="@att.Id"
-                                       class="btn btn-sm btn-outline-secondary">
-                                        <i class="bi bi-download"></i>
-                                    </a>
+                            <li class="flex items-start gap-3 text-sm border-l-2 border-slate-200 pl-3">
+                                <div>
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <span class="text-slate-400">@(log.OldStatus?.Replace("UnderReview","Under Review") ?? "—")</span>
+                                        <span class="text-slate-300">→</span>
+                                        <span class="font-semibold text-slate-800">@(log.NewStatus?.Replace("UnderReview","Under Review") ?? "—")</span>
+                                    </div>
+                                    <p class="text-xs text-slate-400 mt-0.5">@log.ChangedByAdmin · @log.ChangedDate.ToString("MMM dd, yyyy HH:mm")</p>
                                 </div>
                             </li>
                         }
                     </ul>
                 </div>
-            </div>
-        }
+            }
 
-        @if (Model.Idea.CategoryDataFields?.Any() == true)
-        {
-            <div class="card shadow-sm mt-3">
-                <div class="card-header fw-semibold">
-                    <i class="bi bi-tag me-2 text-primary"></i>@(Model.Idea.CategoryDisplayName ?? "Category") Details
-                </div>
-                <div class="card-body">
-                    <dl class="row mb-0">
-                        @foreach (var field in Model.Idea.CategoryDataFields)
-                        {
-                            <dt class="col-sm-4">@field.Key</dt>
-                            <dd class="col-sm-8" style="white-space:pre-wrap">@field.Value</dd>
-                        }
-                    </dl>
-                </div>
-            </div>
-        }
+            @if (historyCount == 0)
+            {
+                <div class="card p-8 text-center text-sm text-slate-400">No workflow or status history yet.</div>
+            }
+        </section>
+    </div>
 
-        <div class="card shadow-sm mt-3 border-primary">
-            <div class="card-header bg-primary text-white">
-                <i class="bi bi-arrow-repeat me-1"></i>Update Status
-            </div>
-            <div class="card-body">
-                <form asp-action="UpdateStatus" method="post">
-                    <input type="hidden" name="IdeaId" value="@Model.Idea.Id" />
-                    <div class="row g-2 align-items-end">
-                        <div class="col-auto">
-                            <label for="NewStatus" class="form-label fw-semibold">New Status</label>
-                            <select name="NewStatus" id="NewStatus" class="form-select">
+    <!-- Sidebar: operational controls -->
+    <aside class="xl:col-span-4 space-y-4 xl:sticky xl:top-24 self-start">
+
+        <div class="action-panel">
+            <div class="action-panel-section">
+                <h3 class="action-panel-title">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Lifecycle status
+                </h3>
+                <p class="text-xs text-slate-400 mb-3">Current: <span class="@StatusBadgeClass(Model.Idea.Status)">@StatusLabel(Model.Idea.Status)</span></p>
+                @if (Model.CanManualLifecycleEdit)
+                {
+                    <form asp-action="UpdateStatus" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="IdeaId" value="@Model.Idea.Id" />
+                        <div class="flex gap-2">
+                            <select name="NewStatus" class="form-select text-sm flex-1 h-8 py-1.5">
                                 @foreach (var status in Model.AllowedStatuses)
                                 {
                                     <option value="@status" selected="@(Model.Idea.Status == status)">
-                                        @status.Replace("UnderReview", "Under Review")
+                                        @StatusLabel(status)
                                     </option>
                                 }
                             </select>
+                            <button type="submit" class="btn-secondary btn-sm flex-shrink-0">Apply</button>
                         </div>
-                        <div class="col-auto">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-lg me-1"></i>Save
-                            </button>
-                        </div>
-                    </div>
-                </form>
+                    </form>
+                    <p class="text-[11px] text-slate-400 mt-2">Set the idea status directly: Submitted → Under Review → Accepted / Rejected.</p>
+                }
+                else
+                {
+                    <p class="text-xs text-slate-500">This idea is decided — outcomes cannot be changed from this panel.</p>
+                }
             </div>
         </div>
 
-        @if (canAdvance || canRevert || canDecide)
-        {
-            <div class="card shadow-sm mt-3">
-                <div class="card-header fw-semibold">
-                    <i class="bi bi-diagram-3 me-1 text-primary"></i>Review Pipeline Actions
-                </div>
-                <div class="card-body d-flex flex-wrap gap-2">
-                    @if (canAdvance && !canDecide)
-                    {
-                        <a asp-action="AdvanceStage" asp-route-id="@Model.Idea.Id"
-                           class="btn btn-primary">
-                            <i class="bi bi-arrow-right-circle me-1"></i>Advance Stage
-                        </a>
-                    }
-                    @if (canDecide)
-                    {
-                        <a asp-action="RecordDecision" asp-route-id="@Model.Idea.Id"
-                           class="btn btn-dark">
-                            <i class="bi bi-check2-circle me-1"></i>Record Final Decision
-                        </a>
-                    }
-                    @if (canRevert)
-                    {
-                        <a asp-action="RevertStage" asp-route-id="@Model.Idea.Id"
-                           class="btn btn-outline-warning">
-                            <i class="bi bi-arrow-left-circle me-1"></i>Revert Stage
-                        </a>
-                    }
-                </div>
-            </div>
-        }
-    </div>
-
-    <div class="col-lg-4">
-        @if (Model.Idea.Status == "UnderReview" || Model.Idea.StageHistory.Any())
-        {
-            <div class="card shadow-sm mb-3">
-                <div class="card-header fw-semibold">
-                    <i class="bi bi-diagram-3 me-1 text-primary"></i>Review Progress
-                </div>
-                <div class="card-body">
-                    @{
-                        var stages = new[] { "Initial Screening", "Technical Review", "Business Impact Assessment", "Final Decision" };
-                        var currentOrder = Model.Idea.CurrentReviewStageOrder;
-                    }
-                    <div class="d-flex flex-column gap-2">
-                        @for (int i = 1; i <= 4; i++)
-                        {
-                            var isDone = i < currentOrder;
-                            var isCurrent = i == currentOrder;
-                            var iconClass = isDone ? "bi-check-circle-fill text-success"
-                                : isCurrent ? "bi-record-circle-fill text-primary"
-                                : "bi-circle text-muted";
-                            <div class="d-flex align-items-center gap-2 @(isCurrent ? "fw-semibold" : "text-muted")">
-                                <i class="bi @iconClass fs-5"></i>
-                                <span class="small">@stages[i - 1]</span>
-                            </div>
-                        }
-                    </div>
-                </div>
-            </div>
-        }
-
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h6 class="text-muted mb-3">Submission Details</h6>
-                <dl class="row mb-0">
-                    <dt class="col-5">Submitted by</dt>
-                    <dd class="col-7">@Model.Idea.SubmitterName</dd>
-                    <dt class="col-5">Category</dt>
-                    <dd class="col-7">
-                        @if (Model.Idea.CategoryDisplayName != null)
-                        {
-                            <span class="badge bg-secondary">@Model.Idea.CategoryDisplayName</span>
-                        }
-                        else
-                        {
-                            <span class="text-muted">Uncategorized</span>
-                        }
-                    </dd>
-                    <dt class="col-5">Created</dt>
-                    <dd class="col-7">@Model.Idea.CreatedDate.ToString("MMM dd, yyyy")</dd>
-                    <dt class="col-5">Last updated</dt>
-                    <dd class="col-7">@Model.Idea.LastModifiedDate.ToString("MMM dd, yyyy")</dd>
-                </dl>
+        <div class="card p-4 text-xs text-slate-500 space-y-2">
+            <p class="font-semibold text-slate-700 text-sm">At-a-glance</p>
+            <p><span class="text-slate-400">Category:</span> @(Model.Idea.CategoryDisplayName ?? "Uncategorized")</p>
+            <p><span class="text-slate-400">Last modified:</span> @Model.Idea.LastModifiedDate.ToString("MMM dd, yyyy HH:mm")</p>
+            <p><span class="text-slate-400">History rows:</span> @historyCount</p>
+            <div class="pt-2 flex flex-wrap gap-2">
+                <a href="#submission" class="text-blue-600 hover:underline">Narrative</a>
+                <a href="#attachments" class="text-blue-600 hover:underline">Attachments</a>
+                <a href="#evaluation" class="text-blue-600 hover:underline">Scores</a>
+                <a href="#history" class="text-blue-600 hover:underline">History</a>
             </div>
         </div>
 
-        @if (Model.Idea.AuditHistory.Any())
+        @if (Model.ScoreSummary != null && Model.ScoreSummary.ScorerCount > 0)
         {
-            <div class="card shadow-sm mt-3">
-                <div class="card-body">
-                    <h6 class="text-muted mb-3">Status History</h6>
-                    <ul class="list-unstyled mb-0">
-                        @foreach (var log in Model.Idea.AuditHistory)
-                        {
-                            <li class="mb-2 small">
-                                <i class="bi bi-arrow-right-circle text-primary me-1"></i>
-                                <strong>@log.OldStatus</strong> → <strong>@log.NewStatus</strong>
-                                <br />
-                                <span class="text-muted">by @log.ChangedByAdmin on @log.ChangedDate.ToString("MMM dd, yyyy")</span>
-                            </li>
-                        }
-                    </ul>
+            <div class="card p-4 border-l-4 border-amber-400">
+                <h3 class="action-panel-title">
+                    <svg class="w-3.5 h-3.5 text-amber-500 fill-current" viewBox="0 0 20 20">
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                    Aggregate score
+                </h3>
+                <div class="flex items-baseline gap-2">
+                    <span class="text-3xl font-bold text-slate-900 tabular-nums">@Model.ScoreSummary.OverallAverage?.ToString("F2")</span>
+                    <span class="text-sm text-slate-400">/ 5</span>
                 </div>
+                <p class="text-xs text-slate-400 mt-1">@Model.ScoreSummary.ScorerCount reviewer(s)</p>
+                <a href="#evaluation" class="mt-3 inline-block text-xs text-blue-600 hover:text-blue-700 font-medium">Open scoring section →</a>
             </div>
         }
-
-        @if (Model.Idea.StageHistory.Any())
-        {
-            <div class="card shadow-sm mt-3">
-                <div class="card-header fw-semibold">
-                    <i class="bi bi-clock-history me-1 text-secondary"></i>Stage History
-                </div>
-                <div class="card-body p-0">
-                    <ul class="list-group list-group-flush">
-                        @foreach (var t in Model.Idea.StageHistory)
-                        {
-                            var directionIcon = t.IsAdvance ? "bi-arrow-right-circle-fill text-primary" : "bi-arrow-left-circle-fill text-warning";
-                            <li class="list-group-item small">
-                                <div class="d-flex align-items-center gap-1 mb-1">
-                                    <i class="bi @directionIcon"></i>
-                                    @if (t.FromStageName != null)
-                                    {
-                                        <span>@t.FromStageName</span>
-                                        <i class="bi bi-arrow-right text-muted"></i>
-                                    }
-                                    <strong>@t.ToStageName</strong>
-                                    @if (!string.IsNullOrEmpty(t.Outcome))
-                                    {
-                                        var outcomeClass = t.Outcome == "Accepted" ? "bg-success" : "bg-danger";
-                                        <span class="badge @outcomeClass ms-1">@t.Outcome</span>
-                                    }
-                                </div>
-                                @if (!string.IsNullOrEmpty(t.RevertReason))
-                                {
-                                    <div class="text-muted fst-italic">Reason: @t.RevertReason</div>
-                                }
-                                @if (!string.IsNullOrEmpty(t.Notes))
-                                {
-                                    <div class="text-muted">@t.Notes</div>
-                                }
-                                <div class="text-muted mt-1">
-                                    by @t.TransitionedByAdminName · @t.TransitionDate.ToString("MMM dd, yyyy HH:mm")
-                                </div>
-                            </li>
-                        }
-                    </ul>
-                </div>
-            </div>
-        }
-    </div>
+    </aside>
 </div>

@@ -3,7 +3,7 @@
     ViewData["Title"] = "Settings — Blind Review Mode";
 }
 
-<div class="container py-4" style="max-width: 640px;">
+<div class="mx-auto py-lg-4" style="max-width: 720px;">
     <nav aria-label="breadcrumb" class="mb-3">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a asp-controller="Admin" asp-action="Index">Ideas</a></li>
@@ -12,27 +12,14 @@
         </ol>
     </nav>
 
-    @if (TempData["Success"] != null)
-    {
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="bi bi-check-circle me-2"></i>@TempData["Success"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    }
-    @if (TempData["Error"] != null)
-    {
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="bi bi-exclamation-triangle me-2"></i>@TempData["Error"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    }
 
-    <div class="card shadow-sm">
-        <div class="card-header d-flex align-items-center gap-2">
+
+    <div class="portal-card mb-4">
+        <div class="portal-card-header bg-transparent border-0 d-flex align-items-center gap-2">
             <i class="bi bi-eye-slash fs-5 text-primary"></i>
             <h5 class="mb-0">Blind Review Mode</h5>
         </div>
-        <div class="card-body">
+        <div class="portal-card-body">
             <p class="text-muted mb-4">
                 When enabled, administrator reviewers cannot see the identity of idea submitters
                 (name, email, department) during the evaluation process. Identity is automatically
@@ -94,11 +81,11 @@
         </div>
     </div>
 
-    <div class="card shadow-sm mt-3">
-        <div class="card-header">
+    <div class="portal-card">
+        <div class="portal-card-header bg-transparent border-0">
             <h6 class="mb-0 text-muted"><i class="bi bi-info-circle me-1"></i>How Blind Review Works</h6>
         </div>
-        <div class="card-body">
+        <div class="portal-card-body">
             <ul class="mb-0 small text-muted">
                 <li>Submitter names are replaced with <strong>"Anonymous Submitter"</strong> in all admin views.</li>
                 <li>The review workflow (stage advances, reverts, decisions) is fully functional.</li>
